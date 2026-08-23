@@ -236,6 +236,16 @@ body {
 .pr-empty { padding: 24px; text-align: center; color: var(--c-text-dim); font-size: 13px; }
 .palette-foot { display: flex; gap: 18px; padding: 10px 16px; border-top: 1px solid var(--c-glass-border); font-size: 11px; color: var(--c-text-dim); }
 
+/* ===== 分享预览浮层（不依赖弹窗） ===== */
+.share-preview { position: fixed; inset: 0; z-index: 210; display: flex; align-items: center; justify-content: center; padding: 24px; }
+.share-preview-backdrop { position: absolute; inset: 0; background: rgba(5,8,14,0.6); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); animation: fadeIn .15s ease; }
+.share-preview-box { position: relative; width: min(780px, 92vw); border-radius: 16px; padding: 16px; display: flex; flex-direction: column; gap: 12px; animation: paletteIn .18s ease; }
+.share-preview-head { display: flex; align-items: center; justify-content: space-between; font-weight: 600; font-size: 14px; }
+.share-preview-body { overflow: auto; max-height: 64vh; border-radius: 10px; background: #0b111b; }
+.share-preview-body img { display: block; width: 100%; height: auto; }
+.share-preview-foot { display: flex; justify-content: flex-end; }
+.share-preview-foot .chain-btn { width: auto; margin-top: 0; padding: 9px 20px; }
+
 /* 节点悬停聚焦：相关连线发光 */
 .edge.hovering .edge-line { opacity: .95; box-shadow: 0 0 10px currentColor; }
 

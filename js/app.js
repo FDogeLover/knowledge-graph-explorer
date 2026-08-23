@@ -918,6 +918,10 @@
 
     // 分享
     $("shareBtn").addEventListener("click", captureShare);
+    $("shareClose").addEventListener("click", closeShare);
+    $("sharePreview").querySelectorAll("[data-spclose]").forEach(function (el) {
+      el.addEventListener("click", closeShare);
+    });
     // AI
     $("aiFab").addEventListener("click", function () { toggleAI(); });
     $("aiClose").addEventListener("click", function () { toggleAI(false); });
@@ -1057,7 +1061,7 @@
     wrap.appendChild(frag);
   }
 
-  /* ================= 分享截图（纯 SVG 生成，规避 canvas 污染） ================= */
+  /* ================= 分享截图（纯 SVG 生成 + 页内预览浮层，不依赖弹窗） ================= */
   function captureShare() {
     showToast("正在生成分享图…");
     var svgText = buildSnapshotSvg();
@@ -1073,32 +1077,28 @@
           ctx.drawImage(img, 0, 0);
           var data;
           try { data = canvas.toDataURL("image/png"); }
-          catch (e) { URL.revokeObjectURL(url); data = url; } // 仍受限则退回 SVG
-          openSnapshot(data, url);
-        } catch (err) { URL.revokeObjectURL(url); openSnapshot(url, url); }
+          catch (e) { data = url; } // 仍受限则退回 SVG
+          URL.revokeObjectURL(url);
+          openSnapshot(data);
+        } catch (err) {
+          URL.revokeObjectURL(url);
+          showToast("截图生成失败：" + (err && err.message ? err.message : err));
+        }
       };
       img.onerror = function () { showToast("截图生成失败，请重试"); URL.revokeObjectURL(url); };
       img.src = url;
     } catch (err) { showToast("截图失败：" + (err && err.message ? err.message : err)); }
   }
-  function openSnapshot(src, svgUrl) {
-    var w = window.open("");
-    if (!w) { showToast("浏览器拦截新窗口，请允许弹窗后重试"); return; }
-    w.document.title = "知识图谱探索器 · 《人类简史》";
-    w.document.body.style.margin = "0";
-    w.document.body.style.background = "#0b111b";
-    w.document.body.style.fontFamily = "sans-serif";
-    var img = w.document.createElement("img");
-    img.src = src; img.style.cssText = "display:block;margin:0 auto;max-width:100%;";
-    w.document.body.appendChild(img);
-    var a = w.document.createElement("a");
-    a.href = src; a.download = "知识图谱-screenshot.png";
-    a.textContent = "点击下载图片（或右键/长按保存）";
-    a.style.cssText = "display:block;text-align:center;padding:12px;color:#fff;font-size:14px;";
-    w.document.body.appendChild(a);
-    showToast("已生成，可在新页下载图片");
-    if (svgUrl && svgUrl !== src) URL.revokeObjectURL(svgUrl);
+  /* 页内浮层展示 + 一键下载，无需弹窗 */
+  function openSnapshot(src) {
+    var box = $("sharePreview");
+    var img = $("shareImg");
+    img.onload = function () { showToast("分享图已生成，可预览或下载"); };
+    img.src = src;
+    $("shareDownload").href = src;
+    box.hidden = false;
   }
+  function closeShare() { $("sharePreview").hidden = true; }
 
   function buildSnapshotSvg() {
     var NS = "http://www.w3.org/2000/svg";

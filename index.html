@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>知识图谱探索器 · 《人类简史》</title>
-  <link rel="stylesheet" href="css/style.css?v=5" />
+  <link rel="stylesheet" href="css/style.css?v=6" />
 </head>
 <body>
   <!-- 环境光背景 -->
@@ -106,11 +106,28 @@
     </div>
   </div>
 
+  <!-- 分享预览浮层（不依赖弹窗） -->
+  <div id="sharePreview" class="share-preview" hidden>
+    <div class="share-preview-backdrop" data-spclose></div>
+    <div class="share-preview-box glass">
+      <div class="share-preview-head">
+        <span>分享预览</span>
+        <button type="button" class="detail-close" id="shareClose" aria-label="关闭">×</button>
+      </div>
+      <div class="share-preview-body">
+        <img id="shareImg" alt="知识图谱分享图" />
+      </div>
+      <div class="share-preview-foot">
+        <a id="shareDownload" class="chain-btn" download="知识图谱-screenshot.png">下载图片</a>
+      </div>
+    </div>
+  </div>
+
   <!-- 截图分享画布（隐藏） -->
   <canvas id="shotCanvas" hidden></canvas>
 
   <!-- 内联数据：小工具/沙箱环境不依赖 fetch，前端运行更稳 -->
-  <script src="js/data.inline.js?v=5"></script>
-  <script src="js/app.js?v=5"></script>
+  <script src="js/data.inline.js?v=6"></script>
+  <script src="js/app.js?v=6"></script>
 </body>
 </html>
