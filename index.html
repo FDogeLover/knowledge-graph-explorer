@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>知识图谱探索器 · 《人类简史》</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <!-- 环境光背景 -->
+  <div class="bg-orb orb-1"></div>
+  <div class="bg-orb orb-2"></div>
+  <div class="bg-orb orb-3"></div>
+  <div class="bg-grid"></div>
+  <div class="bg-stars"></div>
+
+  <div id="app" class="app">
+    <h1 class="sr-only">知识图谱探索器 · 《人类简史》</h1>
+    <!-- 顶部导航 -->
+    <header class="topbar glass">
+      <div class="brand" aria-hidden="true">
+        <span class="brand-dot"></span>
+        <span class="brand-name">知识图谱探索器</span>
+      </div>
+      <nav class="nav-actions" aria-label="主题操作">
+        <button class="nav-link is-topic" data-topic title="当前主题：人类简史" aria-label="当前主题：人类简史">人类简史</button>
+        <button class="nav-link muted" id="addTopic" title="添加主题（规划中）" aria-label="添加主题">＋ 添加主题</button>
+      </nav>
+      <div class="top-right">
+        <div class="search" id="searchWrap" role="search" aria-label="搜索概念">
+          <span class="search-icon" aria-hidden="true">⌕</span>
+          <input id="searchInput" type="text" placeholder="探索知识、概念、人物…" autocomplete="off" spellcheck="false" aria-label="搜索概念" />
+          <kbd id="kbdHint">Ctrl K</kbd>
+          <div id="searchPanel" class="search-panel" hidden></div>
+        </div>
+        <button class="icon-btn" id="shareBtn" title="分享当前知识图谱" aria-label="分享当前知识图谱">↗</button>
+      </div>
+    </header>
+
+    <!-- 图谱画布 -->
+    <main id="stage" class="stage" role="main" aria-label="知识图谱画布"></main>
+
+    <!-- 图例 / 类型过滤器 -->
+    <div id="legend" class="legend glass"></div>
+
+    <!-- 操作提示（自动淡出） -->
+    <div id="hint" class="hint glass">
+      <span class="g"><kbd>拖动</kbd> 平移</span>
+      <span class="g"><kbd>滚轮</kbd> 缩放</span>
+      <span class="g"><kbd>点击</kbd> 聚焦</span>
+      <span class="g"><kbd>双击</kbd> 深入</span>
+      <span class="g"><kbd>⌘K</kbd> 搜索</span>
+      <span class="g hint-help" title="按 ? 再次显示"><kbd>?</kbd> 帮助</span>
+    </div>
+
+    <!-- 知识详情侧栏 -->
+    <aside id="detailCard" class="detail glass" hidden></aside>
+
+    <!-- AI 知识向导 -->
+    <button id="aiFab" class="ai-fab glass" title="AI 知识向导" aria-label="AI知识向导">◉</button>
+    <aside id="aiPanel" class="ai-panel glass" hidden>
+      <div class="ai-head">
+        <span class="ai-dot"></span>
+        <span class="ai-title">AI 知识向导</span>
+        <button class="ai-close" id="aiClose">×</button>
+      </div>
+      <div class="ai-body">
+        <div class="ai-context">
+          你正在探索：<b id="aiTopic">—</b>
+        </div>
+        <div class="ai-sugg-label">可以问我</div>
+        <div id="aiSuggest" class="ai-sugg"></div>
+        <div class="ai-chat" id="aiChat" hidden></div>
+      </div>
+      <div class="ai-foot">
+        <input id="aiInput" type="text" placeholder="输入问题…" autocomplete="off" spellcheck="false" />
+        <button id="aiSend" class="icon-btn">➤</button>
+      </div>
+    </aside>
+
+    <!-- 底部版权 -->
+    <footer class="foot">
+      基于尤瓦尔·赫拉利《人类简史》概念整理 · 实验性交互原型 · 由 AI 生成
+    </footer>
+
+    <div id="toast" class="toast" hidden></div>
+  </div>
+
+  <!-- 全屏 Ctrl+K 命令面板 -->
+  <div id="palette" class="palette" hidden>
+    <div class="palette-backdrop" data-pclose></div>
+    <div class="palette-box glass">
+      <div class="palette-bar">
+        <span class="palette-ico">⌕</span>
+        <input id="paletteInput" type="text" placeholder="探索知识、概念、人物…" autocomplete="off" spellcheck="false" />
+        <kbd>Esc</kbd>
+      </div>
+      <div id="paletteResults" class="palette-results"></div>
+      <div class="palette-foot">
+        <span><kbd>↑↓</kbd> 选择</span>
+        <span><kbd>Enter</kbd> 打开</span>
+        <span><kbd>Esc</kbd> 关闭</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- 截图分享画布（隐藏） -->
+  <canvas id="shotCanvas" hidden></canvas>
+
+  <script src="js/app.js"></script>
+</body>
+</html>

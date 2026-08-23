@@ -1,0 +1,20 @@
+# 依赖 / 产物
+node_modules/
+dist/
+build/
+
+# 系统 / 编辑器
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.log
+
+# 临时 / 缓存
+__pycache__/
+*.pyc
+.venv/
+*.local
+
+# 打包产物（提交物另行生成）
+*.zip
