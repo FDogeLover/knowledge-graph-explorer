@@ -24,7 +24,9 @@ body {
   background: radial-gradient(1400px 900px at 22% -12%, #16243d 0%, var(--c-bg) 56%);
   color: var(--c-text);
   overflow: hidden;
+  -webkit-touch-callout: none;
 }
+html { touch-action: manipulation; }
 
 /* ===== 背景环境光 + 微网格 + 星尘 ===== */
 .bg-orb { position: fixed; border-radius: 50%; filter: blur(110px); z-index: 0; pointer-events: none; }
@@ -244,7 +246,12 @@ body {
 .share-preview-body { overflow: auto; max-height: 64vh; border-radius: 10px; background: #0b111b; }
 .share-preview-body img { display: block; width: 100%; height: auto; }
 .share-preview-foot { display: flex; justify-content: flex-end; }
-.share-preview-foot .chain-btn { width: auto; margin-top: 0; padding: 9px 20px; }
+.btn {
+  display: inline-flex; align-items: center; gap: 6px; cursor: pointer; border: none;
+  padding: 9px 20px; border-radius: 10px; font-size: 13px; font-weight: 600; color: #fff;
+  background: linear-gradient(135deg, #c93d2e, #e04f4f); transition: all .18s;
+}
+.btn:hover { filter: brightness(1.1); }
 
 /* 节点悬停聚焦：相关连线发光 */
 .edge.hovering .edge-line { opacity: .95; box-shadow: 0 0 10px currentColor; }

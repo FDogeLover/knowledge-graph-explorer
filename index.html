@@ -2,9 +2,9 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
   <title>知识图谱探索器 · 《人类简史》</title>
-  <link rel="stylesheet" href="css/style.css?v=6" />
+  <link rel="stylesheet" href="css/style.css?v=7" />
 </head>
 <body>
   <!-- 环境光背景 -->
@@ -118,7 +118,7 @@
         <img id="shareImg" alt="知识图谱分享图" />
       </div>
       <div class="share-preview-foot">
-        <a id="shareDownload" class="chain-btn" download="知识图谱-screenshot.png">下载图片</a>
+        <button type="button" class="btn" id="shareSave">保存到相册</button>
       </div>
     </div>
   </div>
@@ -127,7 +127,7 @@
   <canvas id="shotCanvas" hidden></canvas>
 
   <!-- 内联数据：小工具/沙箱环境不依赖 fetch，前端运行更稳 -->
-  <script src="js/data.inline.js?v=6"></script>
-  <script src="js/app.js?v=6"></script>
+  <script src="js/data.inline.js?v=7"></script>
+  <script src="js/app.js?v=7"></script>
 </body>
 </html>

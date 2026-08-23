@@ -72,9 +72,10 @@
     document.title = (G.data && G.data.title) ? G.data.title : "知识图谱探索器";
   }
 
-  /* ================= 数据加载（优先内联多主题，fetch 兜底） ================= */
+  /* ================= 数据加载（容器禁网络，必须内联） ================= */
   function loadData(cb) {
-    // 小工具/沙箱/CSP 下 fetch 可能被拦截，优先使用内联主题清单
+    // 小工具容器禁网络请求（fetch 不可用），数据必须内联：
+    // js/data.inline.js 提供 GRAPH_THEMES（多主题）或 GRAPH_DATA（单主题）。
     if (window.GRAPH_THEMES) {
       G.themes = window.GRAPH_THEMES;
       var ids = Object.keys(G.themes);
@@ -88,12 +89,8 @@
       G.currentTheme = "humans";
       cb(); return;
     }
-    fetch("data/humans.json", { cache: "no-store" })
-      .then(function (r) { if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); })
-      .then(function (json) { G.data = json; G.themes = { humans: json }; G.currentTheme = "humans"; cb(); })
-      .catch(function (err) {
-        showToast("加载数据失败：" + (err && err.message ? err.message : err));
-      });
+    // 容器内无法联网加载数据，需重新生成内联数据包
+    showToast("缺少内联数据：请用 data/*.json 重新生成 js/data.inline.js");
   }
 
   function buildSearchIndex() {
@@ -919,6 +916,7 @@
     // 分享
     $("shareBtn").addEventListener("click", captureShare);
     $("shareClose").addEventListener("click", closeShare);
+    $("shareSave").addEventListener("click", saveShareImage);
     $("sharePreview").querySelectorAll("[data-spclose]").forEach(function (el) {
       el.addEventListener("click", closeShare);
     });
@@ -1089,16 +1087,29 @@
       img.src = url;
     } catch (err) { showToast("截图失败：" + (err && err.message ? err.message : err)); }
   }
-  /* 页内浮层展示 + 一键下载，无需弹窗 */
+  /* 页内浮层展示 + 保存到相册（JSBridge），不依赖弹窗/下载 */
   function openSnapshot(src) {
     var box = $("sharePreview");
     var img = $("shareImg");
-    img.onload = function () { showToast("分享图已生成，可预览或下载"); };
+    img.onload = function () { showToast("分享图已生成"); };
     img.src = src;
-    $("shareDownload").href = src;
+    G.shareDataUrl = src; // 缓存，供「保存到相册」使用
     box.hidden = false;
   }
   function closeShare() { $("sharePreview").hidden = true; }
+  /* 保存到相册：优先 JSBridge（容器内），无桥接则提示 */
+  function saveShareImage() {
+    var data = G.shareDataUrl;
+    if (!data) { showToast("请先生成分享图", true); return; }
+    var mt = window.xhs && window.xhs.miniTool;
+    if (mt && typeof mt.saveImageToPhotosAlbum === "function") {
+      mt.saveImageToPhotosAlbum({ filePath: data })
+        .then(function () { showToast("已保存到相册"); })
+        .catch(function (e) { showToast("保存失败：" + ((e && e.errMsg) || "未知错误"), true); });
+    } else {
+      showToast("请在容器内使用「保存到相册」", true);
+    }
+  }
 
   function buildSnapshotSvg() {
     var NS = "http://www.w3.org/2000/svg";

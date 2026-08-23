@@ -12,6 +12,11 @@ Thumbs.db
 
 # 工具本地状态
 .commandcode/
+.skill/
+_tmp/
+
+# 正式完整版（知识库工作流工具）独立仓库，不混入预览版
+/knowledge-tool/
 
 # 临时 / 缓存
 __pycache__/
