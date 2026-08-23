@@ -10,6 +10,9 @@ Thumbs.db
 .idea/
 *.log
 
+# 工具本地状态
+.commandcode/
+
 # 临时 / 缓存
 __pycache__/
 *.pyc

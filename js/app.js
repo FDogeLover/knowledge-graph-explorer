@@ -71,8 +71,10 @@
   }
   function dist(a, b) { return Math.hypot(a.x - b.x, a.y - b.y); }
 
-  /* ================= 数据加载 ================= */
+  /* ================= 数据加载（优先内联，fetch 兜底） ================= */
   function loadData(cb) {
+    // 小工具/沙箱/CSP 下 fetch 可能被拦截，优先使用内联 GRAPH_DATA
+    if (window.GRAPH_DATA) { G.data = window.GRAPH_DATA; cb(); return; }
     fetch("data/humans.json", { cache: "no-store" })
       .then(function (r) { if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); })
       .then(function (json) { G.data = json; cb(); })

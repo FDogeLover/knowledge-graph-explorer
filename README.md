@@ -42,12 +42,15 @@ python -m http.server 8000
 ├─ index.html        页面骨架（导航 / 图谱画布 / 详情侧栏 / AI 向导 / 命令面板）
 ├─ css/style.css     深色知识宇宙视觉系统（玻璃拟态 / 星尘 / 层级节点）
 ├─ js/app.js         力导向引擎、搜索、聚焦高亮、缩放、分享、AI 向导等全部逻辑
-└─ data/humans.json  《人类简史》概念 / 关系 / 追问数据
+├─ js/data.inline.js 内联数据包（由 data/humans.json 生成，运行时主数据源，避免沙箱下 fetch 受限）
+├─ data/humans.json  《人类简史》概念 / 关系 / 追问数据（编辑源，改后需重新生成内联包）
+└─ README.md         说明文档
 ```
 
 ## 技术说明
 
 - 纯原生 `HTML + CSS + JavaScript`（ES5 风格 IIFE，广泛兼容），无构建步骤、无外部依赖。
+- **更新数据**：编辑 `data/humans.json` 后重新生成内联包：`$json = Get-Content -Raw data/humans.json; Set-Content js/data.inline.js -Value ("window.GRAPH_DATA = " + $json + ";") -Encoding UTF8`。
 - 物理引擎为 `O(n²)` 力计算；当前 14 节点无压力，若扩展至上百节点建议引入网格加速或拆到 Web Worker。
 - 截图分享采用「按数据重建纯 SVG → 画到 canvas 导出 PNG」方案，规避 foreignObject 触发的 canvas 污染。
 
