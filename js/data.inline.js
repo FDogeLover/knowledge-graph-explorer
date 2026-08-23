@@ -1,6 +1,7 @@
-// 自动生成：由 data/humans.json 构建（小工具沙箱内联数据，避免 fetch 依赖）
+// 自动生成：由 data/*.json 构建的多主题内联数据（小工具沙箱内联，避免 fetch 依赖）
 /* eslint-disable */
-window.GRAPH_DATA = {
+window.GRAPH_THEMES = {
+  humans: {
   "topic": "人类简史",
   "title": "知识图谱探索器 · 《人类简史》",
   "subtitle": "尤瓦尔·赫拉利《人类简史》核心概念关系图谱",
@@ -170,4 +171,405 @@ window.GRAPH_DATA = {
     { "from": "ai", "to": "meaning", "label": "RL重现意义危机" },
     { "from": "immortal", "to": "happiness", "label": "永生与幸福之辩" }
   ]
+},
+  space: {
+  "topic": "太空探索",
+  "title": "知识图谱探索器 · 太空探索",
+  "subtitle": "从宇宙大爆炸到火星殖民 · 人类仰望星空的知识图",
+  "version": "1.0.0",
+  "categories": [
+    { "id": "star", "name": "恒星与宇宙", "color": "#f59e0b" },
+    { "id": "planet", "name": "行星与登月", "color": "#3b82f6" },
+    { "id": "rocket", "name": "航天技术", "color": "#2f9e7a" },
+    { "id": "blackhole", "name": "天体奇观", "color": "#a855f7" },
+    { "id": "life", "name": "生命与地外", "color": "#e04f4f" }
+  ],
+  "nodes": [
+    {
+      "id": "bigbang",
+      "label": "宇宙大爆炸",
+      "category": "star",
+      "desc": "约 138 亿年前宇宙从炽热致密的奇点暴涨而来，随后冷却、膨胀，恒星与星系从中诞生，是我们所知一切的起点。",
+      "qa": [
+        { "q": "大爆炸是『炸』出来的吗？", "a": "它不是像炸弹那样把物质炸开，而是时空本身从极小尺度迅速膨胀，现在的星系仍在彼此远离，正是这场膨胀的『余温』。" }
+      ]
+    },
+    {
+      "id": "star",
+      "label": "恒星",
+      "category": "star",
+      "desc": "恒星是聚变的球：氢在核心聚变成氦并释放能量。太阳就是一颗普通的中型黄矮星，支撑了整个生物圈。",
+      "qa": []
+    },
+    {
+      "id": "darkmatter",
+      "label": "暗物质",
+      "category": "star",
+      "desc": "星系旋转得太快，可见物质根本拽不住——科学家相信存在不发光、不反应的『暗物质』为它们提供了额外引力。它能占宇宙总物质的 85%。",
+      "qa": [
+        { "q": "我们看不见暗物质，怎么知道它在？", "a": "通过引力线索：星系旋转曲线、引力透镜和宇宙结构形成都『多出』了一部分质量，这多出来的部分不被任何光探测到。" }
+      ]
+    },
+    {
+      "id": "solar",
+      "label": "太阳系",
+      "category": "planet",
+      "desc": "八大行星围绕太阳运行，地球是第三颗，既不太近也不太远，液态水得以存在，生命在此演化。",
+      "qa": []
+    },
+    {
+      "id": "mars",
+      "label": "火星计划",
+      "category": "planet",
+      "desc": "红色星球是仅次于地球最适合改造的地方，多家机构和商业公司都把『送人到火星』列为远景目标，但往返要两年多。",
+      "qa": [
+        { "q": "为什么人类最想去火星？", "a": "它是曾经可能存水的行星、环境最接近地球，又有大量水冰；即便宜居度不高，也被看作人类跨出太阳系的精神一步。" }
+      ]
+    },
+    {
+      "id": "moon",
+      "label": "登月",
+      "category": "planet",
+      "desc": "1969 年阿波罗 11 号实现人类首次登月。月球至今是唯一有人类足迹的地外天体，也是通往深空的中转站。",
+      "qa": []
+    },
+    {
+      "id": "rocket",
+      "label": "火箭",
+      "category": "rocket",
+      "desc": "火箭靠向下喷射燃气获得反推力冲出大气层。现代火箭回收技术的突破把进入太空的成本砍掉了一个数量级。",
+      "qa": []
+    },
+    {
+      "id": "station",
+      "label": "空间站",
+      "category": "rocket",
+      "desc": "在近地轨道运行的人类前哨站，用于长期微重力实验与对接中转，是国际合作的标志性工程。",
+      "qa": []
+    },
+    {
+      "id": "colony",
+      "label": "太空殖民",
+      "category": "rocket",
+      "desc": "有人设想在月球、火星或绕地轨道建造永久聚落。它既是技术愿景，也牵涉能源、生态与伦理的巨大挑战。",
+      "qa": [
+        { "q": "太空殖民可能实现吗？", "a": "工程上一部分可行（如月球基地），但封闭生态、辐射、重力缺失和心理隔离都是硬约束，更可能先从小型科考前哨开始。" }
+      ]
+    },
+    {
+      "id": "blackhole",
+      "label": "黑洞",
+      "category": "blackhole",
+      "desc": "质量大到连光都逃不出的天体。2019 年人类首次拍到星系中心黑洞的『照片』，其事件视界圆环闻名世界。",
+      "qa": [
+        { "q": "掉进黑洞会怎样？", "a": "从远处看你会无限接近但到不了视界，而你自己会在冲入的瞬间被潮汐力撕碎——这叫『时空冻结』与『面条化』。" }
+      ]
+    },
+    {
+      "id": "wave",
+      "label": "引力波",
+      "category": "blackhole",
+      "desc": "大质量天体碰撞拉扯时空产生的『涟漪』，2015 年被激光干涉仪首次直接观测到，爱因斯坦百年前的预言被证实。",
+      "qa": []
+    },
+    {
+      "id": "exoplanet",
+      "label": "系外行星",
+      "category": "life",
+      "desc": "太阳系之外的行星。天文学家已在宜居带找到不少类地候选，寻找『第二地球』是当代天文学最热的话题。",
+      "qa": []
+    },
+    {
+      "id": "aliens",
+      "label": "外星生命",
+      "category": "life",
+      "desc": "宇宙如此巨大，是否存在其他生命？我们至今没有确凿证据，但也在木卫二等冰下海洋里寻找微生物的痕迹。",
+      "qa": [
+        { "q": "宇宙这么大，会有外星人吗？", "a": "概率上很可能有，但『可能』不等于『已找到』。科学上更现实的探索是先找微生物与宜居条件，而非高级文明。" }
+      ]
+    }
+  ],
+  "edges": [
+    { "from": "bigbang", "to": "star", "label": "孕育首批恒星" },
+    { "from": "bigbang", "to": "darkmatter", "label": "如影随形" },
+    { "from": "star", "to": "solar", "label": "我们的母星" },
+    { "from": "star", "to": "darkmatter", "label": "可见只是冰山一角" },
+    { "from": "solar", "to": "mars", "label": "红色星球" },
+    { "from": "solar", "to": "moon", "label": "离得最近的一次" },
+    { "from": "moon", "to": "rocket", "label": "阿波罗的翅膀" },
+    { "from": "rocket", "to": "station", "label": "轨道驻地" },
+    { "from": "station", "to": "colony", "label": "走向深空的跳板" },
+    { "from": "solar", "to": "colony", "label": "定居家园" },
+    { "from": "blackhole", "to": "wave", "label": "时空涟漪" },
+    { "from": "star", "to": "wave", "label": "双星并合的轰响" },
+    { "from": "exoplanet", "to": "aliens", "label": "寻找第二地球" },
+    { "from": "exoplanet", "to": "colony", "label": "下一个家园" },
+    { "from": "aliens", "to": "solar", "label": "地外猜想" }
+  ]
+},
+  food: {
+  "topic": "中华美食",
+  "title": "知识图谱探索器 · 中华美食",
+  "subtitle": "川粤争锋、南北之争、应时而食 · 一张吃得下的知识图谱",
+  "version": "1.0.0",
+  "categories": [
+    { "id": "cuisine", "name": "菜系", "color": "#e04f4f" },
+    { "id": "staple", "name": "主食", "color": "#f59e0b" },
+    { "id": "snack", "name": "小吃", "color": "#2f9e7a" },
+    { "id": "seasoning", "name": "调味", "color": "#3b82f6" },
+    { "id": "culture", "name": "饮食文化", "color": "#a855f7" }
+  ],
+  "nodes": [
+    {
+      "id": "chuan",
+      "label": "川菜",
+      "category": "cuisine",
+      "desc": "以麻辣见长、善用复合味，讲究『一菜一格、百菜百味』，辣椒、花椒与豆瓣酱是它的灵魂。",
+      "qa": [
+        { "q": "为什么川菜那么辣？", "a": "四川盆地潮湿多雾，古人以花椒、辣椒祛湿开胃，加上多味复合的习惯，慢慢形成了以『麻、辣、鲜、香』为招牌的风格。" }
+      ]
+    },
+    {
+      "id": "yue",
+      "label": "粤菜",
+      "category": "cuisine",
+      "desc": "清而不淡、鲜而不俗，讲究原汁原味与食材本鲜，广式早茶更把『点心文化』推向极致。",
+      "qa": []
+    },
+    {
+      "id": "hotpot",
+      "label": "火锅",
+      "category": "cuisine",
+      "desc": "一锅沸汤、百味入锅，围炉共食自带社交属性。从川渝麻辣到潮汕牛肉，各地火锅各有风骨。",
+      "qa": [
+        { "q": "火锅为什么会火遍全国？", "a": "它既简单标准化、又极具互动与氛围感——汤底、食材、蘸料自由组合，天然适配社交与短视频传播。" }
+      ]
+    },
+    {
+      "id": "dumplings",
+      "label": "饺子",
+      "category": "staple",
+      "desc": "北方逢年过节必吃，形似元宝寓意吉祥。皮薄馅多是手艺活，拌馅调馅各有讲究。",
+      "qa": [
+        { "q": "为什么过年要吃饺子？", "a": "‘荤素搭配、形如元宝’，谐音‘交子’取新旧交替之意，也象征团圆与富足，是北方年夜饭的压轴。" }
+      ]
+    },
+    {
+      "id": "rice",
+      "label": "米饭",
+      "category": "staple",
+      "desc": "南方的绝对主食，米的风味随产地与品种差异极大，一碗好米饭是无数菜肴的底色。",
+      "qa": []
+    },
+    {
+      "id": "noodles",
+      "label": "面条",
+      "category": "staple",
+      "desc": "从兰州拉面到山西刀削，面条把面的筋道与浇头的风味结合，是北方人骨子里的烟火气。",
+      "qa": []
+    },
+    {
+      "id": "xiaolongbao",
+      "label": "小笼包",
+      "category": "snack",
+      "desc": "皮薄、汤多、味鲜，一口一个。带汤是它的灵魂，配上一碟醋与姜丝，是早茶与点心界的顶流。",
+      "qa": []
+    },
+    {
+      "id": "stinky",
+      "label": "臭豆腐",
+      "category": "snack",
+      "desc": "闻着臭、吃着香，靠发酵产生独特风味。长沙黑色、绍兴绿色，各地咸鲜辣味各有归属。",
+      "qa": []
+    },
+    {
+      "id": "chili",
+      "label": "辣椒",
+      "category": "seasoning",
+      "desc": "原产中南美洲、约明代入华，先被当观赏与药用，后来彻底改写了中国菜的辣味版图。",
+      "qa": [
+        { "q": "辣椒原来不是中国原产？", "a": "对，它从美洲经海上贸易传入中国，明清才逐步走红，川湘渝的‘辣’其实是后来形成的风味。" }
+      ]
+    },
+    {
+      "id": "soy",
+      "label": "酱油",
+      "category": "seasoning",
+      "desc": "由大豆与小麦发酵而成，是中式调味的基础，提鲜上色一勺搞定，被称为‘百搭之酱’。",
+      "qa": []
+    },
+    {
+      "id": "tea",
+      "label": "茶",
+      "category": "culture",
+      "desc": "从神农尝百草到陆羽《茶经》，茶既是饮品也是文化符号，早茶、茶礼、待客之道皆因它而生。",
+      "qa": []
+    },
+    {
+      "id": "newyear",
+      "label": "年夜饭",
+      "category": "culture",
+      "desc": "一年中最郑重的家宴，讲究『年年有余、步步高升』，是团圆、祭祖与仪式感的集中体现。",
+      "qa": [
+        { "q": "年夜饭为什么要有鱼？", "a": "取‘年年有余’的好彩头，而且常常‘留着不吃完’，把‘余’的期许留到第二年。" }
+      ]
+    },
+    {
+      "id": "solarterms",
+      "label": "应时而食",
+      "category": "culture",
+      "desc": "古人对「不时不食」的朴素智慧——按节气吃当季食材，春生夏长、秋收冬藏，也养成了各地的节令食俗。",
+      "qa": []
+    }
+  ],
+  "edges": [
+    { "from": "solarterms", "to": "newyear", "label": "岁末围炉" },
+    { "from": "hotpot", "to": "newyear", "label": "围炉而食" },
+    { "from": "chuan", "to": "chili", "label": "无辣不欢" },
+    { "from": "chuan", "to": "hotpot", "label": "麻辣之源" },
+    { "from": "yue", "to": "tea", "label": "早茶点心" },
+    { "from": "yue", "to": "soy", "label": "豉油提鲜" },
+    { "from": "yue", "to": "xiaolongbao", "label": "点心名角" },
+    { "from": "dumplings", "to": "newyear", "label": "守岁必吃" },
+    { "from": "dumplings", "to": "noodles", "label": "北方主食双雄" },
+    { "from": "rice", "to": "noodles", "label": "南北之分" },
+    { "from": "rice", "to": "yue", "label": "煲仔饭香" },
+    { "from": "stinky", "to": "xiaolongbao", "label": "小吃界的卧虎藏龙" },
+    { "from": "stinky", "to": "yue", "label": "各地咸辣鲜" },
+    { "from": "hotpot", "to": "chili", "label": "红汤滚烫" },
+    { "from": "soy", "to": "hotpot", "label": "蘸料灵魂" }
+  ]
+},
+  cats: {
+  "topic": "猫咪冷知识",
+  "title": "知识图谱探索器 · 猫咪冷知识",
+  "subtitle": "喵说方言、踩奶有由、夜行者与自带梳子 · 一本猫奴快乐图鉴",
+  "version": "1.0.0",
+  "categories": [
+    { "id": "action", "name": "行为", "color": "#f59e0b" },
+    { "id": "body", "name": "身体", "color": "#e04f4f" },
+    { "id": "sense", "name": "感官", "color": "#3b82f6" },
+    { "id": "lang", "name": "喵言喵语", "color": "#2f9e7a" },
+    { "id": "origin", "name": "溯源", "color": "#a855f7" }
+  ],
+  "nodes": [
+    {
+      "id": "meow",
+      "label": "喵叫",
+      "category": "lang",
+      "desc": "成年猫几乎不对同类喵叫，这套『语言』更像是专为与人类沟通而进化出来的——不同的喵甚至带地域口音。",
+      "qa": [
+        { "q": "为什么猫只对人喵喵叫？", "a": "幼猫会用叫声找妈妈，成年后这套行为被保留并‘定向’到人类身上：猫发现对你喵叫有回应，就学会了用声音和你交涉。" }
+      ]
+    },
+    {
+      "id": "purr",
+      "label": "呼噜声",
+      "category": "action",
+      "desc": "呼噜常被认为是舒服，但猫在紧张或疼痛时也会呼噜——它可能有自我安抚与疗愈的作用。",
+      "qa": []
+    },
+    {
+      "id": "knead",
+      "label": "踩奶",
+      "category": "action",
+      "desc": "猫用前爪有节奏地‘揉踩’软物，是幼年吸奶时的遗留动作，踩到舒服或安心时就会不自觉表演。",
+      "qa": [
+        { "q": "猫为什么会对着被子踩来踩去？", "a": "那是它当小猫时在猫妈怀里踩奶的童年记忆，软软的被子让猫回到安心的小时候。" }
+      ]
+    },
+    {
+      "id": "grooming",
+      "label": "舔毛",
+      "category": "body",
+      "desc": "舔毛既是清洁也是降温：夏天唾液蒸发带走热量，冬天则把毛舔平更保暖，猫每天能花上几个小时打理自己。",
+      "qa": []
+    },
+    {
+      "id": "tongue",
+      "label": "猫舌倒刺",
+      "category": "body",
+      "desc": "猫舌布满角蛋白倒刺，像一把自带的小梳子，既能理毛还能把肉刮干净——这也是被舔会让你有沙沙刺感的原因。",
+      "qa": [
+        { "q": "为什么被猫舔会有类似砂纸的感觉？", "a": "舌头的倒刺其实是微小的角质‘钩子’，倒朝向喉咙便于梳毛和吃肉，也会带来沙沙的触感。" }
+      ]
+    },
+    {
+      "id": "whiskers",
+      "label": "胡须",
+      "category": "sense",
+      "desc": "胡须是敏锐的触觉天线，能感知风中气流和狭窄缝隙的宽度，帮猫在黑暗里精准穿行。",
+      "qa": []
+    },
+    {
+      "id": "nighteye",
+      "label": "夜行视力",
+      "category": "sense",
+      "desc": "猫眼有强烈的反光层和高密度视杆细胞，暗光下的视觉比人类好 6 倍，天生是夜猎选手。",
+      "qa": [
+        { "q": "猫为什么夜里看得很清楚？", "a": "视网膜后面的‘照膜层’会像镜子一样把穿过的光反射回去再吸收一次，配合超多视杆细胞，低光下看得比人清楚很多。" }
+      ]
+    },
+    {
+      "id": "scent",
+      "label": "嗅觉",
+      "category": "sense",
+      "desc": "猫的嗅觉比人类灵敏得多，喜欢用脸颊和身体蹭来蹭去，其实是用信息素给自己的领地盖章。",
+      "qa": []
+    },
+    {
+      "id": "tail",
+      "label": "尾巴信号",
+      "category": "lang",
+      "desc": "猫尾巴像一根情绪天线：竖直是开心、摇晃是兴奋、夹着是害怕，读懂尾巴就读懂了喵心情。",
+      "qa": []
+    },
+    {
+      "id": "scratch",
+      "label": "磨爪",
+      "category": "action",
+      "desc": "磨爪不只为了修剪爪子，更是在家具上留下视觉与气味标记——这是在大声宣告‘这里是我的地盘’。",
+      "qa": []
+    },
+    {
+      "id": "hunt",
+      "label": "捕猎天分",
+      "category": "action",
+      "desc": "就算吃得饱，猫也会忍不住追逐逗猫棒——捕猎是写进基因的本能，家猫只是把‘猎物’换成了会动的小玩具。",
+      "qa": []
+    },
+    {
+      "id": "ancestor",
+      "label": "非洲野猫",
+      "category": "origin",
+      "desc": "约一万年前，西亚的非洲野猫主动靠近人类粮仓来捉老鼠，一步步被‘驯服’成了今天的家猫，可以说是猫选择了人。",
+      "qa": []
+    },
+    {
+      "id": "independence",
+      "label": "半驯化",
+      "category": "origin",
+      "desc": "猫是‘半驯化’动物：保留了很强的独立性与领地性，这也是它高冷又黏人、让人捉摸不透的根源。",
+      "qa": []
+    }
+  ],
+  "edges": [
+    { "from": "meow", "to": "ancestor", "label": "只对人类‘说话’" },
+    { "from": "purr", "to": "knead", "label": "安心才有" },
+    { "from": "knead", "to": "meow", "label": "猫式撒娇" },
+    { "from": "nighteye", "to": "hunt", "label": "天生的夜猎手" },
+    { "from": "scent", "to": "scratch", "label": "气味领地" },
+    { "from": "whiskers", "to": "nighteye", "label": "黑暗双保险" },
+    { "from": "tongue", "to": "grooming", "label": "自带梳子" },
+    { "from": "tail", "to": "meow", "label": "心情双声道" },
+    { "from": "scratch", "to": "tail", "label": "标记与表达" },
+    { "from": "grooming", "to": "tongue", "label": "打理工具" },
+    { "from": "grooming", "to": "scratch", "label": "日常整理" },
+    { "from": "ancestor", "to": "hunt", "label": "抓鼠起家" },
+    { "from": "ancestor", "to": "independence", "label": "半驯化之源" },
+    { "from": "hunt", "to": "purr", "label": "捕猎与安抚" },
+    { "from": "meow", "to": "independence", "label": "独立又黏人" }
+  ]
+}
 };
+window.GRAPH_DATA = window.GRAPH_THEMES.humans;

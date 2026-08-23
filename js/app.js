@@ -11,8 +11,6 @@
     world: null,
     zoom: 1,
     pan: { x: 0, y: 0 },
-    physics: null,
-    raf: null,
     searchText: {},
     searchOrder: [],
     hiddenCats: {},
@@ -70,14 +68,29 @@
     window.addEventListener("blur", abort); // 失焦兜底，避免"卡住"
   }
   function dist(a, b) { return Math.hypot(a.x - b.x, a.y - b.y); }
+  function syncTitle() {
+    document.title = (G.data && G.data.title) ? G.data.title : "知识图谱探索器";
+  }
 
-  /* ================= 数据加载（优先内联，fetch 兜底） ================= */
+  /* ================= 数据加载（优先内联多主题，fetch 兜底） ================= */
   function loadData(cb) {
-    // 小工具/沙箱/CSP 下 fetch 可能被拦截，优先使用内联 GRAPH_DATA
-    if (window.GRAPH_DATA) { G.data = window.GRAPH_DATA; cb(); return; }
+    // 小工具/沙箱/CSP 下 fetch 可能被拦截，优先使用内联主题清单
+    if (window.GRAPH_THEMES) {
+      G.themes = window.GRAPH_THEMES;
+      var ids = Object.keys(G.themes);
+      G.currentTheme = ("humans" in G.themes) ? "humans" : ids[0];
+      G.data = G.themes[G.currentTheme];
+      cb(); return;
+    }
+    if (window.GRAPH_DATA) {
+      G.data = window.GRAPH_DATA;
+      G.themes = { humans: G.data };
+      G.currentTheme = "humans";
+      cb(); return;
+    }
     fetch("data/humans.json", { cache: "no-store" })
       .then(function (r) { if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); })
-      .then(function (json) { G.data = json; cb(); })
+      .then(function (json) { G.data = json; G.themes = { humans: json }; G.currentTheme = "humans"; cb(); })
       .catch(function (err) {
         showToast("加载数据失败：" + (err && err.message ? err.message : err));
       });
@@ -107,9 +120,9 @@
       if (ecc < bestEcc) { bestEcc = ecc; best = keys[i]; }
     }
     G.hub = best;
-    // 每个节点层等级（到 hub 的距离，超出置 3）
+    // 每个节点层等级（到 hub 的距离，超出或不可达置 3）
     var d = bfsDist(best);
-    keys.forEach(function (k) { G.nodesById[k].level = Math.min(d[k], 3); });
+    keys.forEach(function (k) { G.nodesById[k].level = (d[k] == null) ? 3 : Math.min(d[k], 3); });
   }
   function eccentricity(start) { return Math.max.apply(null, Object.values(bfsDist(start))); }
   function bfsDist(start) {
@@ -124,8 +137,9 @@
     return d;
   }
 
-  /* ================= 布局建立 ================= */
-  function setup() {
+  /* ================= 布局建立（数据相关，可随主题重建） ================= */
+  function buildGraph() {
+    G.catById = {}; G.nodesById = {}; G.searchOrder = []; G.searchText = {};
     G.data.categories.forEach(function (c) { G.catById[c.id] = c; });
     G.data.nodes.forEach(function (n) {
       G.nodesById[n.id] = {
@@ -147,18 +161,82 @@
 
     computeHub();
     buildSearchIndex();
-    loadRecent();
     initWorld();
-    initPhysics();
+    initPhysics();   // 静态径向布局，稳定不塌缩
     renderLegend();
+    renderFrame();
+  }
+
+  function teardownGraph() {
+    if (G.world) { G.world.remove(); G.world = null; }
+    legendEl.innerHTML = "";
+    detailCard.hidden = true; detailCard.classList.remove("show", "dim");
+    G.selectedKey = null; G.hub = null; G.hiddenCats = {}; G.draggingNode = false;
+    searchInput.value = "";
+    matchesCache = null;
+  }
+
+  /* 一次性：绑定全局事件与 UI（不随主题重建） */
+  function setup() {
+    loadRecent();
     seedStars();
     initPalette();
     bindEvents();
-
-    // 载入后聚焦枢纽节点，并自适应视图让首屏全部节点可见
+    buildThemeMenu();
+    buildGraph();
     focusNodeHub();
     fitView(null);
+    syncTitle();
     startHintFade();
+  }
+
+  /* ================= 多主题 ================= */
+  var themeTrigger, themeMenu;
+  function buildThemeMenu() {
+    themeTrigger = $("themeTrigger");
+    themeMenu = $("themeMenu");
+    themeTrigger.addEventListener("click", function (e) {
+      e.stopPropagation();
+      themeMenu.hidden = !themeMenu.hidden;
+      document.querySelectorAll(".tm-item").forEach(function (it) {
+        it.classList.toggle("active", it.dataset.tid === G.currentTheme);
+      });
+    });
+    document.addEventListener("click", function (e) {
+      if ((themeMenu && !themeMenu.hidden) && !themeMenu.contains(e.target) && !themeTrigger.contains(e.target)) {
+        themeMenu.hidden = true;
+      }
+    });
+    fillThemeMenu();
+  }
+  function fillThemeMenu() {
+    themeMenu.innerHTML = "";
+    Object.keys(G.themes).forEach(function (id) {
+      var t = G.themes[id];
+      var it = document.createElement("button"); it.type = "button";
+      it.className = "tm-item"; it.dataset.tid = id;
+      it.innerHTML = '<span class="tm-name">' + t.topic + '</span><span class="tm-sub">' + t.subtitle + '</span>';
+      it.addEventListener("click", function () { switchTheme(id); });
+      themeMenu.appendChild(it);
+    });
+    var reset = document.createElement("button"); reset.type = "button";
+    reset.className = "tm-reset"; reset.textContent = "复位视图";
+    reset.addEventListener("click", function () { themeMenu.hidden = true; resetPan(); });
+    themeMenu.appendChild(reset);
+  }
+  function switchTheme(id) {
+    var t = G.themes[id];
+    if (!t || t === G.data) { themeMenu.hidden = true; return; }
+    G.currentTheme = id;
+    teardownGraph();
+    G.data = t;
+    buildGraph();
+    focusNodeHub();
+    fitView(null);
+    syncTitle();
+    themeMenu.hidden = true;
+    themeTrigger.textContent = t.topic + " ▾";
+    themeTrigger.title = t.subtitle;
   }
 
   /* ================= 画布 ================= */
@@ -221,51 +299,44 @@
     refreshEdgeLabels();
   }
 
-  /* ================= 物理（放大后的受力） ================= */
+  /* ================= 静态布局（中枢居中，按层级分布同心环，永不塌缩） ================= */
   function initPhysics() {
     var W = stage.clientWidth || 1000, H = stage.clientHeight || 680;
-    var R = Math.min(W, H) * 0.42;
     var cx = W / 2, cy = H / 2;
-    var keys = Object.keys(G.nodesById);
-    keys.forEach(function (key, i) {
-      var ang = (i / keys.length) * Math.PI * 2;
-      G.nodesById[key].pos = { x: cx + R * Math.cos(ang), y: cy + R * Math.sin(ang) };
+    var base = Math.min(W, H) * 0.17;
+    var buckets = { 0: [], 1: [], 2: [], 3: [] };
+    Object.keys(G.nodesById).forEach(function (k) {
+      buckets[G.nodesById[k].level].push(k);
     });
-    G.physics = { rep: 5200, spring: 0.055, rest: 195, center: 0.01, damp: 0.85, maxV: 16 };
-  }
-  function stepPhysics() {
-    var P = G.physics, keys = Object.keys(G.nodesById), n = keys.length, i, j;
-    for (i = 0; i < n; i++) {
-      var a = G.nodesById[keys[i]];
-      for (j = i + 1; j < n; j++) {
-        var b = G.nodesById[keys[j]];
-        var dx = b.pos.x - a.pos.x, dy = b.pos.y - a.pos.y;
-        var d = Math.hypot(dx, dy) + 1;
-        var f = P.rep / (d * d);
-        if (d > 300) f = 0;
-        var fx = (dx / d) * f, fy = (dy / d) * f;
-        a.vel.x -= fx; a.vel.y -= fy; b.vel.x += fx; b.vel.y += fy;
+    // 中心 = 枢纽
+    if (G.hub) { G.nodesById[G.hub].pos = { x: cx, y: cy }; }
+    [1, 2, 3].forEach(function (lv) {
+      var keys = buckets[lv];
+      var R = base * (lv === 1 ? 1 : lv * 0.92);
+      keys.forEach(function (k, i) {
+        var ang = (i / keys.length) * Math.PI * 2 - Math.PI / 2;
+        G.nodesById[k].pos = {
+          x: cx + R * Math.cos(ang),
+          y: cy + R * Math.sin(ang)
+        };
+      });
+    });
+    // 兜底：零散未落入环上的节点放到最外圈
+    buckets[0].forEach(function (k) {
+      if (k !== G.hub && !G.nodesById[k].pos) {
+        G.nodesById[k].pos = { x: cx + base * Math.cos(0), y: cy + base * Math.sin(0) };
       }
+    });
+    residualPlacement(cx, cy, base);
+  }
+  function residualPlacement(cx, cy, base) {
+    var unplaced = [], i;
+    Object.keys(G.nodesById).forEach(function (k) { if (!G.nodesById[k].pos) unplaced.push(k); });
+    var n = unplaced.length;
+    for (i = 0; i < n; i++) {
+      var ang = (i / (n || 1)) * Math.PI * 2;
+      G.nodesById[unplaced[i]].pos = { x: cx + base * 3 * Math.cos(ang), y: cy + base * 3 * Math.sin(ang) };
     }
-    G.data.edges.forEach(function (e) {
-      var a = G.nodesById[e.from], b = G.nodesById[e.to];
-      var dx = b.pos.x - a.pos.x, dy = b.pos.y - a.pos.y;
-      var d = Math.hypot(dx, dy) + 1;
-      var f = (d - P.rest) * P.spring;
-      var fx = (dx / d) * f, fy = (dy / d) * f;
-      a.vel.x += fx; a.vel.y += fy; b.vel.x -= fx; b.vel.y -= fy;
-    });
-    var cx = stage.clientWidth / 2 || 0, cy = stage.clientHeight / 2 || 0, speed = 0;
-    keys.forEach(function (key) {
-      var n = G.nodesById[key];
-      n.vel.x += (cx - n.pos.x) * P.center;
-      n.vel.y += (cy - n.pos.y) * P.center;
-      n.vel.x *= P.damp; n.vel.y *= P.damp;
-      var v = Math.hypot(n.vel.x, n.vel.y);
-      if (v > P.maxV) { n.vel.x = (n.vel.x / v) * P.maxV; n.vel.y = (n.vel.y / v) * P.maxV; }
-      n.pos.x += n.vel.x; n.pos.y += n.vel.y; speed += v;
-    });
-    return speed / n < 0.06;
   }
 
   /* ================= 渲染 ================= */
@@ -396,19 +467,6 @@
     if (ll) ll.classList.toggle("zoom-hi", G.zoom >= 1.18);
   }
   function refreshEdgeLabels() { renderFrame(); }
-
-  /* ================= 动画（载入收敛一次后冻结布局） ================= */
-  var fittedOnce = false;
-  function animate() {
-    var busy = false;
-    for (var i = 0; i < 3; i++) { if (!stepPhysics()) busy = true; }
-    renderFrame();
-    if (!busy && !fittedOnce) { fittedOnce = true; fitView(null); } // 收敛后取景当前布局
-    if (busy) G.raf = requestAnimationFrame(animate); else G.raf = null;
-  }
-  function kickPhysics() {
-    if (!fittedOnce) { if (!G.raf) G.raf = requestAnimationFrame(animate); }
-  }
 
   /* ================= 聚焦 / 高亮 ================= */
   function neighborOf(a, b) {
@@ -860,8 +918,6 @@
 
     // 分享
     $("shareBtn").addEventListener("click", captureShare);
-    // 导航
-    document.querySelector('[data-topic]').addEventListener("click", function () { resetPan(); showToast("当前主题：《人类简史》"); });
     // AI
     $("aiFab").addEventListener("click", function () { toggleAI(); });
     $("aiClose").addEventListener("click", function () { toggleAI(false); });
@@ -872,7 +928,6 @@
     $("aiInput").addEventListener("keydown", function (e) {
       if (e.key === "Enter") { var q = $("aiInput").value.trim(); if (q) askAI(q); }
     });
-    $("addTopic").addEventListener("click", function () { showToast("添加主题功能规划中"); });
   }
 
   function resetPan() {
@@ -1067,7 +1122,8 @@
     parts.push('<svg xmlns="' + NS + '" width="' + W + '" height="' + H + '" viewBox="0 0 ' + W + ' ' + H + '">');
     parts.push('<defs><linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#0b111b"/><stop offset="1" stop-color="#16243d"/></linearGradient></defs>');
     parts.push('<rect width="' + W + '" height="' + H + '" fill="url(#bg)"/>');
-    parts.push('<text x="' + (W / 2) + '" y="34" font-family="PingFang SC, Microsoft YaHei, sans-serif" font-size="17" font-weight="700" fill="#e8edf5" text-anchor="middle" letter-spacing="2">知识图谱探索器 · 《人类简史》</text>');
+    var capTitle = (G.data && G.data.title) ? G.data.title : "知识图谱探索器";
+    parts.push('<text x="' + (W / 2) + '" y="34" font-family="PingFang SC, Microsoft YaHei, sans-serif" font-size="17" font-weight="700" fill="#e8edf5" text-anchor="middle" letter-spacing="2">' + escapeXml(capTitle) + '</text>');
 
     // 边
     G.data.edges.forEach(function (e) {

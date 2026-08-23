@@ -22,9 +22,11 @@
         <span class="brand-dot"></span>
         <span class="brand-name">知识图谱探索器</span>
       </div>
-      <nav class="nav-actions" aria-label="主题操作">
-        <button class="nav-link is-topic" data-topic title="当前主题：人类简史" aria-label="当前主题：人类简史">人类简史</button>
-        <button class="nav-link muted" id="addTopic" title="添加主题（规划中）" aria-label="添加主题">＋ 添加主题</button>
+      <nav class="nav-actions" aria-label="主题选择">
+        <div class="theme-switch" id="themeSwitch">
+          <button class="nav-link is-topic" id="themeTrigger" aria-haspopup="menu">人类简史 ▾</button>
+          <div class="theme-menu glass" id="themeMenu" role="menu" hidden></div>
+        </div>
       </nav>
       <div class="top-right">
         <div class="search" id="searchWrap" role="search" aria-label="搜索概念">

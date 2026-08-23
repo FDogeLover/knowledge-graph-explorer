@@ -1,0 +1,131 @@
+{
+  "topic": "猫咪冷知识",
+  "title": "知识图谱探索器 · 猫咪冷知识",
+  "subtitle": "喵说方言、踩奶有由、夜行者与自带梳子 · 一本猫奴快乐图鉴",
+  "version": "1.0.0",
+  "categories": [
+    { "id": "action", "name": "行为", "color": "#f59e0b" },
+    { "id": "body", "name": "身体", "color": "#e04f4f" },
+    { "id": "sense", "name": "感官", "color": "#3b82f6" },
+    { "id": "lang", "name": "喵言喵语", "color": "#2f9e7a" },
+    { "id": "origin", "name": "溯源", "color": "#a855f7" }
+  ],
+  "nodes": [
+    {
+      "id": "meow",
+      "label": "喵叫",
+      "category": "lang",
+      "desc": "成年猫几乎不对同类喵叫，这套『语言』更像是专为与人类沟通而进化出来的——不同的喵甚至带地域口音。",
+      "qa": [
+        { "q": "为什么猫只对人喵喵叫？", "a": "幼猫会用叫声找妈妈，成年后这套行为被保留并‘定向’到人类身上：猫发现对你喵叫有回应，就学会了用声音和你交涉。" }
+      ]
+    },
+    {
+      "id": "purr",
+      "label": "呼噜声",
+      "category": "action",
+      "desc": "呼噜常被认为是舒服，但猫在紧张或疼痛时也会呼噜——它可能有自我安抚与疗愈的作用。",
+      "qa": []
+    },
+    {
+      "id": "knead",
+      "label": "踩奶",
+      "category": "action",
+      "desc": "猫用前爪有节奏地‘揉踩’软物，是幼年吸奶时的遗留动作，踩到舒服或安心时就会不自觉表演。",
+      "qa": [
+        { "q": "猫为什么会对着被子踩来踩去？", "a": "那是它当小猫时在猫妈怀里踩奶的童年记忆，软软的被子让猫回到安心的小时候。" }
+      ]
+    },
+    {
+      "id": "grooming",
+      "label": "舔毛",
+      "category": "body",
+      "desc": "舔毛既是清洁也是降温：夏天唾液蒸发带走热量，冬天则把毛舔平更保暖，猫每天能花上几个小时打理自己。",
+      "qa": []
+    },
+    {
+      "id": "tongue",
+      "label": "猫舌倒刺",
+      "category": "body",
+      "desc": "猫舌布满角蛋白倒刺，像一把自带的小梳子，既能理毛还能把肉刮干净——这也是被舔会让你有沙沙刺感的原因。",
+      "qa": [
+        { "q": "为什么被猫舔会有类似砂纸的感觉？", "a": "舌头的倒刺其实是微小的角质‘钩子’，倒朝向喉咙便于梳毛和吃肉，也会带来沙沙的触感。" }
+      ]
+    },
+    {
+      "id": "whiskers",
+      "label": "胡须",
+      "category": "sense",
+      "desc": "胡须是敏锐的触觉天线，能感知风中气流和狭窄缝隙的宽度，帮猫在黑暗里精准穿行。",
+      "qa": []
+    },
+    {
+      "id": "nighteye",
+      "label": "夜行视力",
+      "category": "sense",
+      "desc": "猫眼有强烈的反光层和高密度视杆细胞，暗光下的视觉比人类好 6 倍，天生是夜猎选手。",
+      "qa": [
+        { "q": "猫为什么夜里看得很清楚？", "a": "视网膜后面的‘照膜层’会像镜子一样把穿过的光反射回去再吸收一次，配合超多视杆细胞，低光下看得比人清楚很多。" }
+      ]
+    },
+    {
+      "id": "scent",
+      "label": "嗅觉",
+      "category": "sense",
+      "desc": "猫的嗅觉比人类灵敏得多，喜欢用脸颊和身体蹭来蹭去，其实是用信息素给自己的领地盖章。",
+      "qa": []
+    },
+    {
+      "id": "tail",
+      "label": "尾巴信号",
+      "category": "lang",
+      "desc": "猫尾巴像一根情绪天线：竖直是开心、摇晃是兴奋、夹着是害怕，读懂尾巴就读懂了喵心情。",
+      "qa": []
+    },
+    {
+      "id": "scratch",
+      "label": "磨爪",
+      "category": "action",
+      "desc": "磨爪不只为了修剪爪子，更是在家具上留下视觉与气味标记——这是在大声宣告‘这里是我的地盘’。",
+      "qa": []
+    },
+    {
+      "id": "hunt",
+      "label": "捕猎天分",
+      "category": "action",
+      "desc": "就算吃得饱，猫也会忍不住追逐逗猫棒——捕猎是写进基因的本能，家猫只是把‘猎物’换成了会动的小玩具。",
+      "qa": []
+    },
+    {
+      "id": "ancestor",
+      "label": "非洲野猫",
+      "category": "origin",
+      "desc": "约一万年前，西亚的非洲野猫主动靠近人类粮仓来捉老鼠，一步步被‘驯服’成了今天的家猫，可以说是猫选择了人。",
+      "qa": []
+    },
+    {
+      "id": "independence",
+      "label": "半驯化",
+      "category": "origin",
+      "desc": "猫是‘半驯化’动物：保留了很强的独立性与领地性，这也是它高冷又黏人、让人捉摸不透的根源。",
+      "qa": []
+    }
+  ],
+  "edges": [
+    { "from": "meow", "to": "ancestor", "label": "只对人类‘说话’" },
+    { "from": "purr", "to": "knead", "label": "安心才有" },
+    { "from": "knead", "to": "meow", "label": "猫式撒娇" },
+    { "from": "nighteye", "to": "hunt", "label": "天生的夜猎手" },
+    { "from": "scent", "to": "scratch", "label": "气味领地" },
+    { "from": "whiskers", "to": "nighteye", "label": "黑暗双保险" },
+    { "from": "tongue", "to": "grooming", "label": "自带梳子" },
+    { "from": "tail", "to": "meow", "label": "心情双声道" },
+    { "from": "scratch", "to": "tail", "label": "标记与表达" },
+    { "from": "grooming", "to": "tongue", "label": "打理工具" },
+    { "from": "grooming", "to": "scratch", "label": "日常整理" },
+    { "from": "ancestor", "to": "hunt", "label": "抓鼠起家" },
+    { "from": "ancestor", "to": "independence", "label": "半驯化之源" },
+    { "from": "hunt", "to": "purr", "label": "捕猎与安抚" },
+    { "from": "meow", "to": "independence", "label": "独立又黏人" }
+  ]
+}
