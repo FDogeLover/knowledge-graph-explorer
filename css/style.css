@@ -58,6 +58,7 @@ body {
 
 /* ===== 顶部导航（克制化） ===== */
 .topbar {
+  position: relative; z-index: 120; /* 高于画布层，保证主题菜单不被覆盖 */
   display: flex; align-items: center; gap: 18px;
   margin: 12px 16px 8px; padding: 9px 16px;
   border-radius: var(--radius);
@@ -77,11 +78,10 @@ body {
 .nav-link.muted { color: var(--c-text-dim); font-weight:500; }
 .nav-link.muted:hover { color: var(--c-text); }
 
-/* 主题切换下拉 */
-.theme-switch { position: relative; }
+/* 主题切换下拉（置于顶栏外，顶层定位避免被画布遮挡） */
 .theme-menu {
-  position: absolute; top: calc(100% + 8px); left: 0; min-width: 280px;
-  border-radius: 12px; padding: 6px; z-index: 70;
+  position: absolute; top: 64px; left: 110px; min-width: 280px;
+  border-radius: 12px; padding: 6px; z-index: 130;
   display: flex; flex-direction: column; gap: 2px;
 }
 .tm-item {
@@ -142,8 +142,8 @@ body {
 .sp-item .sp-dot { width: 8px; height: 8px; border-radius: 50%; }
 .sp-item .sp-tag { margin-left:auto; font-size:10.5px; color: var(--c-text-dim); }
 
-/* ===== 画布 ===== */
-.stage { position: relative; flex: 1; margin: 0 16px 6px; overflow: hidden; border-radius: var(--radius); }
+/* ===== 画布（置于顶栏之下，避免覆盖主题菜单） ===== */
+.stage { position: relative; z-index: 0; flex: 1; margin: 0 16px 6px; overflow: hidden; border-radius: var(--radius); }
 #edgeLayer { position: absolute; left:0; top:0; width:0; height:0; overflow:visible; }
 #nodeLayer { position: absolute; left:0; top:0; width:0; height:0; overflow:visible; }
 

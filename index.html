@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>知识图谱探索器 · 《人类简史》</title>
-  <link rel="stylesheet" href="css/style.css" />
+  <link rel="stylesheet" href="css/style.css?v=5" />
 </head>
 <body>
   <!-- 环境光背景 -->
@@ -23,10 +23,7 @@
         <span class="brand-name">知识图谱探索器</span>
       </div>
       <nav class="nav-actions" aria-label="主题选择">
-        <div class="theme-switch" id="themeSwitch">
-          <button class="nav-link is-topic" id="themeTrigger" aria-haspopup="menu">人类简史 ▾</button>
-          <div class="theme-menu glass" id="themeMenu" role="menu" hidden></div>
-        </div>
+        <button class="nav-link is-topic" id="themeTrigger" aria-haspopup="menu">人类简史 ▾</button>
       </nav>
       <div class="top-right">
         <div class="search" id="searchWrap" role="search" aria-label="搜索概念">
@@ -38,6 +35,9 @@
         <button class="icon-btn" id="shareBtn" title="分享当前知识图谱" aria-label="分享当前知识图谱">↗</button>
       </div>
     </header>
+
+    <!-- 主题切换下拉：置于顶栏之外（顶层定位），避免被画布层遮挡 -->
+    <div class="theme-menu glass" id="themeMenu" role="menu" hidden></div>
 
     <!-- 图谱画布 -->
     <main id="stage" class="stage" role="main" aria-label="知识图谱画布"></main>
@@ -110,7 +110,7 @@
   <canvas id="shotCanvas" hidden></canvas>
 
   <!-- 内联数据：小工具/沙箱环境不依赖 fetch，前端运行更稳 -->
-  <script src="js/data.inline.js"></script>
-  <script src="js/app.js"></script>
+  <script src="js/data.inline.js?v=5"></script>
+  <script src="js/app.js?v=5"></script>
 </body>
 </html>
