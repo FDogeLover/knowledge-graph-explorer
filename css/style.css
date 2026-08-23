@@ -239,35 +239,50 @@ body {
 /* 节点悬停聚焦：相关连线发光 */
 .edge.hovering .edge-line { opacity: .95; box-shadow: 0 0 10px currentColor; }
 
-/* ===== 详情侧栏 ===== */
+/* ===== 详情侧栏（自适应高度，避开顶部导航） ===== */
 .detail {
-  position: absolute; top: 12px; right: 14px; bottom: 78px; width: 356px;
-  border-radius: var(--radius); padding: 20px; overflow: auto; z-index: 40;
+  position: absolute; top: 70px; right: 16px; width: 356px;
+  max-height: calc(100% - 100px); /* 内容多时最多占到接近底部，少则贴合内容 */
+  border-radius: var(--radius); padding: 18px 20px 14px; overflow-y: auto; z-index: 40;
   transform: translateX(10px); opacity: 0; pointer-events: none;
   transition: transform .26s ease, opacity .26s ease;
 }
 .detail.show { transform: translateX(0); opacity: 1; pointer-events: auto; }
 .detail.dim { opacity: .18; }
-.detail-cat { font-size: 11.5px; color: var(--c-text-dim); letter-spacing: 1px; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
+.detail-cat { font-size: 11.5px; color: var(--c-text-dim); letter-spacing: 1px; margin-bottom: 6px; display: flex; align-items: center; gap: 8px; }
 .detail-dot { width: 10px; height: 10px; border-radius: 50%; box-shadow: 0 0 10px currentColor; }
-.detail h2 { font-size: 23px; margin-bottom: 6px; }
-.detail-level { font-size: 11px; color: var(--c-text-dim); margin-bottom: 12px; letter-spacing: .5px;}
-.detail-desc { font-size: 14px; line-height: 1.78; color: #cdd5e2; margin-bottom: 18px; }
-.detail h3 { font-size: 12px; color: var(--c-accent); letter-spacing: 2px; margin-bottom: 8px; }
-.qa-list { display: flex; flex-direction: column; gap: 10px; }
+.detail h2 { font-size: 23px; margin-bottom: 4px; padding-right: 22px; }
+.detail-level { font-size: 11px; color: var(--c-text-dim); margin-bottom: 10px; letter-spacing: .5px;}
+.detail-desc { font-size: 14px; line-height: 1.76; color: #cdd5e2; margin-bottom: 6px; }
+
+/* 分组：分隔线 + 收紧标题下方间距 */
+.detail h3 {
+  font-size: 12px; color: var(--c-accent); letter-spacing: 2px;
+  margin: 16px 0 8px; padding-top: 14px; border-top: 1px solid var(--c-glass-border);
+}
+.qa-list { display: flex; flex-direction: column; gap: 8px; }
 .qa { border: 1px solid var(--c-glass-border); background: rgba(255,255,255,0.04); border-radius: 10px; overflow: hidden; }
-.qa-q { width: 100%; display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 11px 13px; cursor: pointer; background: none; border: none; color: var(--c-text); font-size: 13.5px; text-align: left; font-weight: 600; }
+.qa-q { width: 100%; display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 10px 13px; cursor: pointer; background: none; border: none; color: var(--c-text); font-size: 13.5px; text-align: left; font-weight: 600; }
 .qa-a { max-height: 0; overflow: hidden; transition: max-height .32s ease; }
 .qa.open .qa-a { max-height: 360px; }
-.qa-a p { padding: 0 13px 12px; font-size: 13px; line-height: 1.72; color: #c2cbd9; }
+.qa-a p { padding: 0 13px 11px; font-size: 13px; line-height: 1.72; color: #c2cbd9; }
 .qa-caret { transition: transform .25s; color: var(--c-text-dim); }
 .qa.open .qa-caret { transform: rotate(90deg); }
 
-.detail-close { position: absolute; top: 12px; right: 12px; background: none; border: none; color: var(--c-text-dim); font-size: 20px; cursor: pointer; line-height: 1; padding: 4px; }
-.detail-close:hover { color: var(--c-text); }
+/* 关闭按钮：独立绝对定位 + 最高层级，始终钉在面板右上角 */
+.detail-close {
+  position: absolute; top: 10px; right: 10px; z-index: 60;
+  width: 28px; height: 28px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  background: none; border: none; color: var(--c-text-dim); font-size: 18px; cursor: pointer; line-height: 1;
+}
+.detail-close:hover { color: var(--c-text); background: rgba(255,255,255,0.08); }
 
 /* 相关概念 chips */
-.rel-label { font-size: 12px; color: var(--c-accent); letter-spacing: 2px; margin: 18px 0 8px; }
+.rel-label {
+  font-size: 12px; color: var(--c-accent); letter-spacing: 2px;
+  margin: 16px 0 8px; padding-top: 14px; border-top: 1px solid var(--c-glass-border);
+}
 .rel-chips { display: flex; flex-wrap: wrap; gap: 7px; }
 .rel-chip {
   border: 1px solid var(--c-glass-border); background: rgba(255,255,255,0.05);
@@ -278,7 +293,7 @@ body {
 .rel-chip .rc-dot { width:7px;height:7px;border-radius:50%;display:inline-block;margin-right:6px;vertical-align:1px; }
 
 .chain-btn {
-  width: 100%; margin-top: 16px; padding: 10px; border-radius: 10px; cursor: pointer;
+  width: 100%; margin-top: 14px; padding: 10px; border-radius: 10px; cursor: pointer;
   background: linear-gradient(135deg, rgba(224,79,79,0.18), rgba(245,158,11,0.14));
   border: 1px solid #e04f4f44; color: var(--c-text); font-size: 13px; font-weight: 600; transition: all .2s;
 }
@@ -369,7 +384,7 @@ body {
   .foot { display: none; }
 
   /* 详情/向导面板适配窄屏，避免同屏叠挡 */
-  .detail { width: min(88vw, 320px); top: 8px; right: 8px; bottom: 8px; }
+  .detail { width: min(88vw, 320px); top: 100px; right: 8px; max-height: calc(100% - 118px); }
   .ai-panel { right: 10px; bottom: 78px; width: min(90vw, 320px); }
   .ai-fab { right: 14px; bottom: 14px; width: 46px; height: 46px; }
   .hint { display: none; }
