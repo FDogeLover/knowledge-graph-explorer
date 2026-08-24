@@ -183,12 +183,18 @@ def delete_one(note_id: str):
     ok = store.delete_note(note_id)
     if not ok:
         raise HTTPException(404, "笔记不存在")
-    # 联动清理：重建索引/标签表/主题表（孤儿标签、图表引用随之移除）
+    # 联动清理：重建索引（标签/主题）+ 删除不再被任何 source 引用的孤立实体/概念页
+    cleaned = {"entity": 0, "concept": 0}
+    try:
+        from .. import cleaner as cleaner_mod
+        cleaned = cleaner_mod.prune_orphan_skeletons()
+    except Exception:  # noqa: BLE001
+        pass
     try:
         indexer.rebuild()
     except Exception:  # noqa: BLE001
         pass
-    return {"ok": True}
+    return {"ok": True, "cleaned": cleaned}
 
 
 @router.get("/search")

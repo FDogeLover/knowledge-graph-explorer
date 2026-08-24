@@ -128,6 +128,67 @@ def ensure_links(note_id: str) -> dict:
     return created
 
 
+def prune_orphan_skeletons() -> dict:
+    """删除不再被任何 source 引用的孤立 entity/concept 页（删除 source 后联动调用）。
+
+    引用判定（双保险，避免误删）：
+    1. 结构化双链：所有 source 的 `## 相关实体/概念` 区块解析出的名称；
+    2. 兜底：任意 source 正文中出现的 `[[名称]]`（含 `[[名称|显示]]` 形态）。
+    未命中任一引用的 entity/concept 页视为孤立。
+    采用**软删除**：移入 data/.trash/YYYYMMDD/{kind}/ 回收站，可手动恢复（防止误删不可逆）。
+    """
+    import shutil
+    import time as _time
+    from .models import NoteMeta, slugify
+
+    trash = store.config.DATA_ROOT / ".trash" / _time.strftime("%Y%m%d")
+    referenced = set()
+    for m in store.list_notes(note_type="source"):
+        note = store.load_note(m.id)
+        if not note:
+            continue
+        links = link_entities_concepts(note)
+        for it in links["entities"] + links["concepts"]:
+            name = (it.get("name") or "").strip()
+            if name:
+                referenced.add(name)
+        # 兜底：正文任何 [[...]] 双链都算引用（覆盖非规范区块的散布引用）
+        for mm in re.finditer(r"\[\[([^\]|]+)(?:\|[^\]|]*)?\]\]", note.body):
+            name = mm.group(1).strip()
+            if name:
+                referenced.add(name)
+
+    removed = {"entity": 0, "concept": 0}
+    names = []
+    for kind in ("entity", "concept"):
+        base = store.config.NOTES_DIR / kind
+        if not base.exists():
+            continue
+        for folder in base.glob("*/"):
+            meta_p = folder / "meta.json"
+            if not meta_p.exists():
+                continue
+            meta = NoteMeta.from_dict(store.load_json(meta_p))
+            title = (meta.title or "").strip()
+            nid = meta.id or ""
+            if not nid:
+                continue
+            # 以标题或规范化 slug 命中引用即保留
+            if title in referenced or slugify(title) in referenced:
+                continue
+            # 软删除：移入回收站（同名冲突则加时间戳后缀）
+            dst_dir = trash / kind
+            dst_dir.mkdir(parents=True, exist_ok=True)
+            dst = dst_dir / nid
+            if dst.exists():
+                dst = dst_dir / f"{nid}-{int(_time.time())}"
+            if (store.config.NOTES_DIR / kind / nid).exists():
+                shutil.move(str(store.config.NOTES_DIR / kind / nid), str(dst))
+                removed[kind] += 1
+                names.append({"kind": kind, "id": nid, "title": title, "trash": str(dst)})
+    return {**removed, "names": names}
+
+
 def clean_all() -> dict:
     metas = store.list_notes()
     results = []
