@@ -68,6 +68,39 @@ def clean_note(note_id: str, topic: str = "") -> dict:
             "summary": summary, "links": links}
 
 
+def _find_existing_skeleton(name: str, kind: str) -> str | None:
+    """实体/概念页归并：避免 AI 重复采集输出近似别名时产生并行节点。
+
+    规则（保守，防误并）：
+    1. 完全同名 → 直接复用（slug 相同）；
+    2. 子串近似：一名称是另一名称的连续子串，且短名 ≥3 字、长度差 ≤6 → 复用已存在页
+       （如 Libby/OverDrive⇄OverDrive、中国国家图书馆⇄国家图书馆）。
+    """
+    target = (name or "").strip()
+    if not target:
+        return None
+    nid = store.slugify(target)
+    if store.load_meta(nid):
+        return nid
+    base = store.config.NOTES_DIR / kind
+    if not base.exists():
+        return None
+    for folder in base.glob("*/"):
+        meta_p = folder / "meta.json"
+        if not meta_p.exists():
+            continue
+        m = NoteMeta.from_dict(store.load_json(meta_p))
+        title = (m.title or "").strip()
+        if not title or title == target:
+            continue
+        short, long = (title, target) if len(title) <= len(target) else (target, title)
+        if len(short) < 3:
+            continue
+        if short in long and len(long) - len(short) <= 6:
+            return m.id
+    return None
+
+
 def ensure_links(note_id: str) -> dict:
     """对单篇 source：解析其双链表，为不存在的实体/概念建骨架页。
     返回 {"entity": 新建数, "concept": 新建数}。
@@ -80,11 +113,15 @@ def ensure_links(note_id: str) -> dict:
     links = link_entities_concepts(note)
     created = {"entity": 0, "concept": 0}
     for item in links["entities"]:
-        up = upsert_entity_concept(item["name"], item["desc"], "entity", note_id, note.meta.topic)
+        target_id = _find_existing_skeleton(item["name"], "entity")
+        up = upsert_entity_concept(item["name"], item["desc"], "entity", note_id,
+                                   note.meta.topic, target_id=target_id)
         if up["action"] == "created":
             created["entity"] += 1
     for item in links["concepts"]:
-        up = upsert_entity_concept(item["name"], item["desc"], "concept", note_id, note.meta.topic)
+        target_id = _find_existing_skeleton(item["name"], "concept")
+        up = upsert_entity_concept(item["name"], item["desc"], "concept", note_id,
+                                   note.meta.topic, target_id=target_id)
         if up["action"] == "created":
             created["concept"] += 1
     return created
@@ -196,19 +233,27 @@ def link_entities_concepts(note) -> dict:
     }
 
 
-def upsert_entity_concept(name: str, desc: str, kind: str, source_id: str = "", topic: str = "") -> dict:
+def upsert_entity_concept(name: str, desc: str, kind: str, source_id: str = "",
+                          topic: str = "", target_id: str = "") -> dict:
     """创建/更新 entity 或 concept 骨架页（借鉴 Obsidian update_or_create_entity）。
-    kind ∈ entity / concept；已存在则仅更新时间戳，不覆盖内容。
+    kind ∈ entity / concept；已存在则仅记录来源引用，不覆盖内容。
+    target_id：归并目标（同一实体被别名引用时复用已存在页），留空走默认 slug。
     """
     from .models import Note, NoteMeta, now_iso, slugify
 
-    note_id = slugify(name)
+    note_id = target_id or slugify(name)
     existing = store.load_meta(note_id)
     today = now_iso()
 
     if existing:
-        # 已存在骨架页：仅记录 update（内容保留）
-        return {"id": note_id, "kind": kind, "action": "updated" if source_id else "exists"}
+        # 已存在骨架页：记录来源引用（别名归并也走这里，action=reused）
+        body = existing and store.load_note(note_id)
+        if body is not None and source_id and f"[[{source_id}]]" not in body.body:
+            body.body = body.body + f"\n- [[{source_id}]]\n"
+            body.meta.updated_at = today
+            store._write_note(body)
+        action = "reused" if target_id else ("updated" if source_id else "exists")
+        return {"id": note_id, "kind": kind, "action": action}
 
     meta = NoteMeta(
         id=note_id,

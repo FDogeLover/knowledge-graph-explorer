@@ -181,7 +181,14 @@ def _safe_jsonify(content: str) -> dict:
         raise RuntimeError("LLM 返回空内容")
     content = content.strip()
     if content.startswith("```"):
+        # markdown 代码块：剥掉 ``` json 头尾
         content = content.strip("`").lstrip("json").strip()
+    # 容忍弱模型用文字包裹：如「好的，这是结果:{...} 请查收」——抽取首个 { 到末尾 } 的对象片段
+    if not content.startswith("{"):
+        i = content.find("{")
+        j = content.rfind("}")
+        if 0 <= i < j:
+            content = content[i:j + 1]
     try:
         return json.loads(content)
     except json.JSONDecodeError as e:

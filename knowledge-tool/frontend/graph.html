@@ -254,6 +254,37 @@
           nd.x = cx + nd._R * radiusMul * Math.cos(angs[nd.id]);
           nd.y = cy + nd._R * radiusMul * Math.sin(angs[nd.id]);
         });
+        desnake();
+      }
+
+      /* ===== 防贯穿：近垂直的『长』边会被画成竖线贯穿整个画布 =====
+         (布局把两节点推到近乎同 x、y 相差上千像素的场景)。对每条这样的边，
+         把度数较低的一端绕画布中心微调角度，打斜到明显非竖直。 */
+      function desnake() {
+        if (g.edges.length < 2) return;
+        var W = stage.clientWidth || 800, H = stage.clientHeight || 500;
+        var longLimit = Math.max(W, H) * 0.5;
+        var cx = W / 2, cy = H / 2;
+        var tries = {};
+        g.edges.forEach(function (e) {
+          var a = g.byId[e.from], b = g.byId[e.to];
+          if (!a || !b) return;
+          var dx = b.x - a.x, dy = b.y - a.y;
+          var len = Math.hypot(dx, dy);
+          if (len < longLimit) return;
+          // 近垂直：cos 角 ≤0.18（约偏离垂直线 10° 以内都兜住，避免 85° 残留直感）
+          var vertical = Math.abs(dx / len) < 0.18;
+          if (!vertical) return;
+          var nd = (b._deg || 0) < (a._deg || 0) ? b : a;   // 扰动度数较低的一端
+          tries[nd.id] = (tries[nd.id] || 0) + 1;
+          if (tries[nd.id] > 2) return;
+          // 一次打斜约 20°~29°（视半径），让长边明显倾斜而非竖直贯穿
+          var rot = tries[nd.id] === 1 ? 0.42 : -0.52;
+          var ang = Math.atan2(nd.y - cy, nd.x - cx) + rot;
+          var r = Math.hypot(nd.x - cx, nd.y - cy);
+          nd.x = cx + r * Math.cos(ang);
+          nd.y = cy + r * Math.sin(ang);
+        });
       }
 
       /* ===== 节点尺寸：类型基准 + 度数权重 ===== */
@@ -368,10 +399,13 @@
         var edges = g.rawEdges.filter(function (e) { return set.has(e.from) && set.has(e.to); });
         // 过滤后自动聚焦首个匹配节点（搜索→直接看详情），无匹配则提示
         render({ nodes: nodes, edges: edges }, { filtered: true, autoFocus: true });
+        var hint = document.getElementById("ghint");
         if (!nodes.length) {
-          document.getElementById("ghint").textContent = q ? "无匹配节点，已清空或调整关键词" : "该类型下暂无节点";
+          hint.textContent = q ? "无匹配节点，已清空或调整关键词" : "该类型下暂无节点";
+        } else if (!q && !g.fType) {
+          hint.textContent = "拖动平移 · 滚轮缩放 · 点击查看 · 输入关键词或选类型可过滤";
         } else {
-          document.getElementById("ghint").textContent = "拖动平移 · 滚轮缩放 · 点击查看";
+          hint.textContent = "拖动平移 · 滚轮缩放 · 点击查看";
         }
       }
 

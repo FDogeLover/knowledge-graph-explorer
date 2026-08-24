@@ -65,6 +65,7 @@ class TaskManager:
         finally:
             with self._lock:
                 self._tasks[task_id]["finished_at"] = time.strftime("%Y-%m-%d %H:%M:%S")
+                self._trim_locked()   # 完成时也裁剪，防止『连续完成但不再提交』时超 50 条
 
     def update_progress(self, task_id: str, progress: float) -> None:
         with self._lock:
@@ -83,6 +84,15 @@ class TaskManager:
 
 # ---------- 错误中文映射 ----------
 _PATTERNS = [
+    # LLM 业务错误（Key/权限/模型不存在）——信息里带 "LLM"，与采集页 401/403 区分
+    ("invalid_api_key", "API Key 无效：请到「设置」页重新填写"),
+    ("api_key", "API Key 错误：请检查 Key 是否正确"),
+    ("llm 返回 401", "鉴权失败（401）：API Key 无效或已过期，请到「设置」页重新填写"),
+    ("llm 返回 403", "权限不足（403）：API Key 无权访问该模型或已限流"),
+    ("model not found", "模型不存在或不可用：请检查模型名"),
+    ("model_not_found", "模型不存在或不可用：请检查模型名"),
+    ("not support", "模型能力不支持该参数：已尝试降级重试"),
+    # 采集/网络类
     ("Request URL is missing protocol", "链接地址无效：需以 http:// 或 https:// 开头"),
     ("RemoteProtocolError", "网络协议错误：连接被中断，请稍后重试"),
     ("ConnectTimeout", "网络连接超时：无法访问目标服务器"),
@@ -90,21 +100,27 @@ _PATTERNS = [
     ("ReadTimeout", "读取超时：目标服务器响应过慢"),
     ("ReadError", "网络读取失败：连接被重置"),
     ("SSL", "TLS 证书/加密连接错误"),
-    ("404", "目标地址不存在（404）"),
+    ("404", "资源不存在（404）"),
     ("403", "服务器拒绝访问（403，可能被反爬限制）"),
+    ("401", "访问被拒绝（401）：链接可能需登录或已失效"),
     ("NameResolutionError", "域名解析失败：地址可能拼写有误"),
     ("UnicodeDecodeError", "内容编码解析失败（非 UTF-8）"),
 ]
 
 
 def _friendly_error(e: Exception) -> str:
-    """把异常转成操作者可读的中文提示；已含中文的异常直接透传。"""
+    """把异常转成操作者可读的中文提示。
+
+    顺序：先做模式匹配——LLM 业务错误信息常已含中文（如「LLM 返回 401」），
+    需要覆盖；未命中任何模式的纯中文信息才原样透传。
+    """
     s = str(e)
+    low = s.lower()
+    for key, zh in _PATTERNS:
+        if key in low:
+            return zh
     if any("\u4e00" <= ch <= "\u9fff" for ch in s):
         return s
-    for key, zh in _PATTERNS:
-        if key.lower() in s.lower():
-            return zh
     return f"任务执行失败：{s[:200]}"
 
 
