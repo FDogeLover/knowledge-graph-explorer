@@ -49,31 +49,64 @@
       var info = document.getElementById("stepInfo");
       var body = document.getElementById("stepBody");
       document.getElementById("prevBtn").disabled = cur === 1;
-      document.getElementById("nextBtn").textContent = cur === 5 ? "完成初始化" : "下一步";
-      var steps = ["数据目录", "模板选择", "主题预设", "标签规则", "完成"];
+      document.getElementById("nextBtn").textContent = cur === 6 ? "完成初始化" : "下一步";
+      var steps = ["数据目录", "模板选择", "主题预设", "标签规则", "示例知识库", "完成"];
 
       if (cur === 1) {
-        info.textContent = "第 1/5 步 · 数据目录";
+        info.textContent = "第 1/6 步 · 数据目录";
         body.innerHTML = '<label>数据根目录（留空使用默认 data/）</label><input id="root" type="text" placeholder="如 D:\\knowledge\\my-notes" value="' + state.root + '">';
       } else if (cur === 2) {
-        info.textContent = "第 2/5 步 · 模板选择";
+        info.textContent = "第 2/6 步 · 模板选择";
         body.innerHTML = '<label>默认使用「文章」笔记模板（meta.schema.json + article.md）</label><div style="color:var(--c-dim);font-size:13px;line-height:1.7">采集后正文存 body.md，元数据存 meta.json；可直接被 Obsidian 打开、可 git 版本管理。</div>';
       } else if (cur === 3) {
-        info.textContent = "第 3/5 步 · 主题预设";
+        info.textContent = "第 3/6 步 · 主题预设";
         body.innerHTML = '<label>预置主题（逗号分隔，可留空后改）</label><input id="topics" type="text" placeholder="技术,商业,人文,科学,生活" value="' + state.topics.join(",") + '">';
       } else if (cur === 4) {
-        info.textContent = "第 4/5 步 · 标签规则";
+        info.textContent = "第 4/6 步 · 标签规则";
         body.innerHTML = '<div style="color:var(--c-dim);font-size:13px;line-height:1.7">整理器基于内置关键词规则自动打标签（如含"AI/算法"→ AI）。一期运行期不调 AI，规则可后续在 app/cleaner.py 中维护。</div>';
+      } else if (cur === 5) {
+        info.textContent = "第 5/6 步 · 示例知识库";
+        body.innerHTML =
+          '<div style="color:var(--c-dim);font-size:13px;line-height:1.7;margin-bottom:10px">选择一个初始形态：<b>开箱即用</b>（加载示例：3 来源 + 4 实体 + 4 概念的双链知识库）或<b>从零开始</b>（空库，之后自行采集）。</div>' +
+          '<div class="row"><button type="button" class="btn" id="useSeedBtn">加载示例知识库</button>' +
+          '<button type="button" class="btn ghost" id="emptyBtn">从空库开始</button></div>';
+        // 绑定选择
+        var setupDone = function (extra) {
+          (async function () {
+            try {
+              var r = await api.post("/api/setup", { root: state.root || null, topics: state.topics, templates: true });
+              if (extra) { await api.post("/api/setup/seed", {}); }
+              var s = await api.get("/api/stats/overview");
+              toast(extra ? "已加载示例知识库 ✅" : "已创建空库，可从「采集」开始");
+              document.getElementById("stepBody").innerHTML = extra
+                ? '<div style="color:#2f9e7a;font-size:14px">✅ 示例知识库就绪：' + s.daily.summary.total + ' 篇笔记 · ' + s.daily.summary.topics + ' 个主题 · 图谱 ' + s.structure.topic_count + ' 主题</div>'
+                : '<div style="color:#2f9e7a;font-size:14px">✅ 空库已就绪，可在「采集」页开始收录内容</div>';
+              document.getElementById("nextBtn").style.display = "none";
+            } catch (e) { toast("初始化失败：" + e.message, true); }
+          })();
+        };
+        var b1 = document.getElementById("useSeedBtn");
+        var b2 = document.getElementById("emptyBtn");
+        b1.onclick = function () { b1.disabled = true; b2.disabled = true; setupDone(true); };
+        b2.onclick = function () { b1.disabled = true; b2.disabled = true; setupDone(false); };
+        // 初始读入 root/topics（供后续使用）
+        if (document.getElementById("root")) state.root = document.getElementById("root").value.trim();
+        if (document.getElementById("topics")) state.topics = document.getElementById("topics").value.split(/[,，]/).map(function (s) { return s.trim(); }).filter(Boolean);
+        return; // 已由按钮触发完成，不走下一步
       } else {
-        info.textContent = "第 5/5 步 · 完成";
-        body.innerHTML = '<div style="color:var(--c-dim);font-size:13px;line-height:1.7">将创建目录结构（notes / templates / reports）、写入主题表与标签表，并生成模板文件。</div>';
+        info.textContent = "第 6/6 步 · 完成";
+        body.innerHTML = '<div style="color:var(--c-dim);font-size:13px;line-height:1.7">在上一页选择「加载示例知识库」或「从空库开始」，即可完成初始化。</div>';
       }
     }
 
-    // 完成初始化
+    // 完成初始化（兜底：若直接点到底）
     document.getElementById("nextBtn").onclick = async function () {
       if (cur < 5) { step(1); return; }
-      if (cur === 1 && document.getElementById("root")) state.root = document.getElementById("root").value.trim();
+      if (cur === 5 || cur === 6) {
+        // 已在第 5 步通过按钮完成，或到达第 6 步——回退引导
+        step(-1); return;
+      }
+      if (document.getElementById("root")) state.root = document.getElementById("root").value.trim();
       if (document.getElementById("topics")) state.topics = document.getElementById("topics").value.split(/[,，]/).map(function (s) { return s.trim(); }).filter(Boolean);
       try {
         var r = await api.post("/api/setup", { root: state.root || null, topics: state.topics, templates: true });

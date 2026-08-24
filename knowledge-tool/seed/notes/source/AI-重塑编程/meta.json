@@ -1,0 +1,52 @@
+{
+  "id": "AI-重塑编程",
+  "title": "AI 重塑编程",
+  "source_url": null,
+  "created_at": "2026-08-24 17:50:56",
+  "updated_at": "2026-08-24 17:50:56",
+  "topic": "技术",
+  "tags": [
+    "AI",
+    "编程"
+  ],
+  "keywords": [
+    "AI",
+    "模型",
+    "编程",
+    "框架",
+    "OpenAI",
+    "Vercel",
+    "刚需",
+    "相关"
+  ],
+  "summary": "人工智能正在重塑编程行业，大模型让算法开发更快，工程师在学习新框架。",
+  "status": "clean",
+  "fingerprint": "3de34075c9f63c313f1dc466af1e8d7b35b9debf",
+  "type": "source",
+  "source_type": "网页",
+  "date_published": "",
+  "related_entities": [
+    {
+      "name": "OpenAI",
+      "desc": "代表性大模型公司",
+      "type": "entity"
+    },
+    {
+      "name": "Vercel",
+      "desc": "AI 前端框架主力",
+      "type": "entity"
+    }
+  ],
+  "related_concepts": [
+    {
+      "name": "大模型",
+      "desc": "驱动本轮 AI 应用的核心",
+      "type": "concept"
+    },
+    {
+      "name": "AI编程",
+      "desc": "编码辅助成为刚需",
+      "type": "concept"
+    }
+  ]
+}

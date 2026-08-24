@@ -28,6 +28,19 @@ def run_setup(body: SetupBody):
     return {"ok": True, **result}
 
 
+class SeedBody(BaseModel):
+    overwrite: bool = True
+
+
+@router.post("/setup/seed")
+def load_seed(body: SeedBody):
+    """一键导入示例知识库（seed/），新手开箱即用，无需从零搭建。"""
+    if not store.ensure_initialized():
+        store.init_knowledge_base()
+    result = store.import_seed(overwrite=body.overwrite)
+    return {"ok": True, **result}
+
+
 # ---------- collect ----------
 class CollectUrlBody(BaseModel):
     url: str

@@ -71,6 +71,53 @@ def _rebind_paths() -> None:
     config.TOPICS_FILE = config.DATA_ROOT / "topics.json"
 
 
+def import_seed(overwrite: bool = True) -> dict:
+    """一键导入受版本控制的示例知识库（seed/ → data/notes）。
+
+    供「开箱即用」场景：新手无需从零搭建即可看到完整双链示例（source→entity→concept）。
+    已存在的笔记默认跳过（不覆盖用户数据），overwrite=False 时完全不覆盖。
+    """
+    seed_notes = config.SEED_DIR / "notes"
+    if not seed_notes.exists():
+        return {"imported": 0, "skipped": 0, "reason": "seed 不存在"}
+
+    imported = skipped = 0
+    topics: set = set()
+    for meta_p in seed_notes.glob("*/*/meta.json"):
+        try:
+            m = NoteMeta.from_dict(load_json(meta_p))
+        except Exception:  # noqa: BLE001
+            skipped += 1
+            continue
+        # 已有同名笔记则跳过（保留用户数据）
+        if (not overwrite) and (note_path(m.id, m.type) / "meta.json").exists():
+            skipped += 1
+            continue
+        folder = note_path(m.id, m.type)
+        folder.mkdir(parents=True, exist_ok=True)
+        (folder / "meta.json").write_text(meta_p.read_text(encoding="utf-8"), encoding="utf-8")
+        body_p = meta_p.parent / "body.md"
+        if body_p.exists():
+            (folder / "body.md").write_text(body_p.read_text(encoding="utf-8"), encoding="utf-8")
+        topics.add(m.topic or "")
+        imported += 1
+
+    # 合并主题表
+    topics_data = load_json(config.TOPICS_FILE, default={"topics": []})
+    existing = set(topics_data["topics"])
+    existing.update(t for t in topics if t)
+    topics_data["topics"] = sorted(existing)
+    save_json(config.TOPICS_FILE, topics_data)
+
+    # 重建索引 & 整理
+    try:
+        from . import indexer
+        idx = indexer.rebuild()
+    except Exception:  # noqa: BLE001
+        idx = {}
+    return {"imported": imported, "skipped": skipped, "index": idx}
+
+
 # ---------- 笔记读写 ----------
 def note_path(note_id: str, note_type: str = "source") -> Path:
     # 目录层级：notes/{type}/{slug}/  —— 借鉴 Obsidian wiki 的 source/entity/concept 分层

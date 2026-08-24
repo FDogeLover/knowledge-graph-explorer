@@ -14,12 +14,15 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 DATA_ROOT = Path(os.environ.get("KNOWLEDGE_ROOT", BASE_DIR / "data"))
 
 # 数据根下的子目录
-NOTES_DIR = DATA_ROOT / "notes"          # 笔记库（按主题分目录）
+NOTES_DIR = DATA_ROOT / "notes"          # 笔记库（按来源/实体/概念分目录）
 TEMPLATES_DIR = DATA_ROOT / "templates"  # 笔记模板
 REPORTS_DIR = DATA_ROOT / "reports"      # 生成的每日报告
 INDEX_FILE = DATA_ROOT / "index.json"    # 索引器产物（标签/主题/关键词索引）
 TAGS_FILE = DATA_ROOT / "tags.json"      # 标签表
 TOPICS_FILE = DATA_ROOT / "topics.json"  # 主题表
+
+# 示例知识库（受版本控制，可一键导入供新手开箱即用）
+SEED_DIR = BASE_DIR / "seed"
 
 # 笔记元数据字段（meta.json schema）
 META_FIELDS = [
