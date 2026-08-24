@@ -14,6 +14,9 @@ from typing import Optional
 # 状态枚举（对应设计文档）
 NOTE_STATUS = ("draft", "clean", "archived")
 
+# 知识对象层级（借鉴 Obsidian wiki：source → entity/concept 双链）
+NOTE_TYPES = ("source", "entity", "concept")
+
 
 def now_iso() -> str:
     return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -45,6 +48,12 @@ class NoteMeta:
     summary: str = ""
     status: str = "draft"
     fingerprint: str = ""
+    # 知识层级与双链（借鉴 Obsidian wiki）
+    type: str = "source"            # source / entity / concept
+    source_type: str = ""           # 来源渠道：网页 / bilibili / youtube / github 等
+    date_published: str = ""        # 原文发布日期
+    related_entities: list = field(default_factory=list)   # 双链：相关实体
+    related_concepts: list = field(default_factory=list)   # 双链：相关概念
 
     def to_dict(self) -> dict:
         return asdict(self)

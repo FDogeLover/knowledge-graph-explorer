@@ -27,14 +27,14 @@ def main():
     assert r.status_code == 200, r.text
     print("[setup]", r.json())
 
-    # 2. 采集（粘贴正文 x3）
+    # 2. 采集（粘贴正文 x3，含双链区块）
     samples = [
-        {"text": "人工智能正在重塑编程行业，大模型让算法开发更快，工程师在学习新框架。",
-         "title": "AI 重塑编程", "topic": "技术", "tags": ["AI", "编程"]},
-        {"text": "历史与哲学的交汇，人类文明由无数故事构成，社会制度建立于集体想象之上。",
-         "title": "人类文明的故事", "topic": "人文", "tags": ["历史", "哲学"]},
-        {"text": "商业模式创新与市场增长，产品设计与用户体验决定一款应用能否走红。",
-         "title": "增长的产品方法论", "topic": "商业", "tags": ["产品", "增长"]},
+        {"text": "人工智能正在重塑编程行业，大模型让算法开发更快，工程师在学习新框架。\n\n## 相关实体\n- [[OpenAI]] - 代表性大模型公司\n- [[Vercel]] - AI 前端框架主力\n\n## 相关概念\n- [[大模型]] - 驱动本轮 AI 应用的核心\n- [[AI编程]] - 编码辅助成为刚需\n",
+         "title": "AI 重塑编程", "topic": "技术", "tags": ["AI", "编程"], "source_type": "网页"},
+        {"text": "历史与哲学的交汇，人类文明由无数故事构成，社会制度建立于集体想象之上。\n\n## 相关实体\n- [[赫拉利]] - 历史学者\n\n## 相关概念\n- [[集体想象]] - 制度维持的关键\n",
+         "title": "人类文明的故事", "topic": "人文", "tags": ["历史", "哲学"], "source_type": "网页"},
+        {"text": "商业模式创新与市场增长，产品设计与用户体验决定一款应用能否走红。\n\n## 相关实体\n- [[字节跳动]] - 产品驱动增长典范\n\n## 相关概念\n- [[用户增长]] - 增长核心方法论\n",
+         "title": "增长的产品方法论", "topic": "商业", "tags": ["产品", "增长"], "source_type": "网页"},
     ]
     for s in samples:
         r = c.post("/api/collect", json=s)
@@ -42,10 +42,10 @@ def main():
         t = wait_task(r.json()["task_id"])
         print("[collect]", t["status"], t.get("result"))
 
-    # 3. 全库整理
+    # 3. 全库整理（应自动建 entity/concept 骨架页 + 双链）
     r = c.post("/api/notes/clean-all")
     t = wait_task(r.json()["task_id"])
-    print("[clean-all]", t["status"], t.get("result"))
+    print("[clean-all]", t["status"], "skeletons=", t.get("result", {}).get("skeletons_created"))
 
     # 4. 报告
     r = c.get("/api/reports/daily/latest")

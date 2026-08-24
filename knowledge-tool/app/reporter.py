@@ -35,6 +35,7 @@ def build_daily() -> dict:
             "today_new": day_counter.get(today, 0),
             "topics": len(index.get("topics", {})),
             "tags": len(index.get("tags", {})),
+            "by_type": index.get("by_type", {}),
         },
         "trend": last7,
         "topic_dist": index.get("topics", {}),

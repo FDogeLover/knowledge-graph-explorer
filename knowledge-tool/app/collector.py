@@ -16,7 +16,8 @@ from . import store
 from .models import Note, NoteMeta, slugify
 
 
-def collect_url(url: str, topic: str = "", tags: Optional[list] = None) -> dict:
+def collect_url(url: str, topic: str = "", tags: Optional[list] = None,
+                source_type: str = "网页") -> dict:
     """抓取链接并入库。返回 store.save_note 的结果 + 元数据。"""
     headers = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
@@ -36,11 +37,13 @@ def collect_url(url: str, topic: str = "", tags: Optional[list] = None) -> dict:
         source_url=url,
         topic=topic,
         tags=tags or [],
+        source_type=source_type,
     )
     return store.save_note(note)
 
 
-def collect_text(text: str, title: str = "", topic: str = "", tags: Optional[list] = None) -> dict:
+def collect_text(text: str, title: str = "", topic: str = "", tags: Optional[list] = None,
+                 source_type: str = "网页") -> dict:
     """粘贴正文/HTML 入库。"""
     if "<" in text[:200] and ">" in text[:200]:
         soup = BeautifulSoup(text, "html.parser")
@@ -50,17 +53,20 @@ def collect_text(text: str, title: str = "", topic: str = "", tags: Optional[lis
         title = title or text.strip().splitlines()[0][:40]
         body_text = text.strip()
 
-    note = _build_note(title=title, body=body_text, source_url=None, topic=topic, tags=tags or [])
+    note = _build_note(title=title, body=body_text, source_url=None, topic=topic,
+                       tags=tags or [], source_type=source_type)
     return store.save_note(note)
 
 
-def _build_note(title, body, source_url, topic, tags) -> Note:
+def _build_note(title, body, source_url, topic, tags, source_type="网页") -> Note:
     meta = NoteMeta(
         id=slugify(title),
         title=title,
         source_url=source_url,
         topic=topic or "默认主题",
         tags=tags,
+        type="source",
+        source_type=source_type,
     )
     meta.fingerprint = store.make_body_fingerprint(body)
     return Note(meta=meta, body=body)

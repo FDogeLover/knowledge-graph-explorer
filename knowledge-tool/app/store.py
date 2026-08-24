@@ -1,8 +1,8 @@
 """文件数据层：笔记以 meta.json + body.md 双文件存储，无重型数据库。
 
-目录结构（对齐设计文档）：
+目录结构（借鉴 Obsidian wiki 的 source/entity/concept 分层）：
   data/
-  ├─ notes/{topic}/{slug}/meta.json + body.md
+  ├─ notes/{source|entity|concept}/{slug}/meta.json + body.md
   ├─ templates/article.md + meta.schema.json
   ├─ reports/YYYY-MM-DD.md/.json
   ├─ tags.json / topics.json / index.json
@@ -15,7 +15,7 @@ from pathlib import Path
 from typing import List, Optional
 
 from . import config
-from .models import Note, NoteMeta
+from .models import NOTE_TYPES, Note, NoteMeta
 
 
 def ensure_initialized() -> bool:
@@ -34,6 +34,8 @@ def init_knowledge_base(root: Optional[str] = None,
 
     topics = topics or ["默认主题"]
     config.NOTES_DIR.mkdir(parents=True, exist_ok=True)
+    for t in NOTE_TYPES:  # source / entity / concept 三层
+        (config.NOTES_DIR / t).mkdir(parents=True, exist_ok=True)
     config.TEMPLATES_DIR.mkdir(parents=True, exist_ok=True)
     config.REPORTS_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -70,8 +72,11 @@ def _rebind_paths() -> None:
 
 
 # ---------- 笔记读写 ----------
-def note_path(note_id: str, topic: str) -> Path:
-    return config.NOTES_DIR / _safe(topic) / note_id
+def note_path(note_id: str, note_type: str = "source") -> Path:
+    # 目录层级：notes/{type}/{slug}/  —— 借鉴 Obsidian wiki 的 source/entity/concept 分层
+    if note_type not in NOTE_TYPES:
+        note_type = "source"
+    return config.NOTES_DIR / note_type / _safe(note_id)
 
 
 def save_note(note: Note, dedup: bool = True) -> dict:
@@ -99,7 +104,7 @@ def save_note(note: Note, dedup: bool = True) -> dict:
 
 
 def _write_note(note: Note) -> None:
-    folder = note_path(note.meta.id, note.meta.topic)
+    folder = note_path(note.meta.id, note.meta.type)
     folder.mkdir(parents=True, exist_ok=True)
     (folder / "meta.json").write_text(
         json.dumps(note.meta.to_dict(), ensure_ascii=False, indent=2), encoding="utf-8")
@@ -112,47 +117,55 @@ def _touch(note_id: str) -> None:
     if meta:
         from .models import now_iso
         meta.updated_at = now_iso()
-        save_json(note_path(note_id, meta.topic) / "meta.json", meta.to_dict())
+        save_json(note_path(note_id, meta.type) / "meta.json", meta.to_dict())
 
 
-def load_meta(note_id: str, topic: Optional[str] = None) -> Optional[NoteMeta]:
-    folder = note_path(note_id, topic or _find_topic(note_id))
+def load_meta(note_id: str) -> Optional[NoteMeta]:
+    folder = note_path(note_id, _find_type(note_id))
     p = folder / "meta.json"
     if not p.exists():
         return None
     return NoteMeta.from_dict(load_json(p))
 
 
-def load_note(note_id: str, topic: Optional[str] = None) -> Optional[Note]:
-    meta = load_meta(note_id, topic)
+def load_note(note_id: str) -> Optional[Note]:
+    meta = load_meta(note_id)
     if not meta:
         return None
-    body_p = note_path(note_id, meta.topic) / "body.md"
+    body_p = note_path(note_id, meta.type) / "body.md"
     body = body_p.read_text(encoding="utf-8") if body_p.exists() else ""
     return Note(meta=meta, body=body)
 
 
-def list_notes(topic: Optional[str] = None, status: Optional[str] = None) -> List[NoteMeta]:
-    """列出笔记元数据，支持 topic / status 过滤。"""
+def list_notes(note_type: Optional[str] = None, status: Optional[str] = None,
+               topic: Optional[str] = None) -> List[NoteMeta]:
+    """列出笔记元数据，支持 type / status / topic 过滤。
+    目录层级：notes/{source|entity|concept}/{slug}/meta.json
+    """
     out: List[NoteMeta] = []
-    base = config.NOTES_DIR / _safe(topic) if topic else config.NOTES_DIR
-    if not base.exists():
-        return out
-    # 目录层级：.../notes/{topic}/{slug}/meta.json
-    for folder in base.glob("*/*/"):
-        meta_p = folder / "meta.json"
-        if not meta_p.exists():
+    types = [note_type] if note_type else list(NOTE_TYPES)
+    for t in types:
+        base = config.NOTES_DIR / t if t in NOTE_TYPES else config.NOTES_DIR
+        if not base.exists():
             continue
-        meta = NoteMeta.from_dict(load_json(meta_p))
-        if status and meta.status != status:
-            continue
-        out.append(meta)
+        for folder in base.glob("*/"):
+            meta_p = folder / "meta.json"
+            if not meta_p.exists():
+                continue
+            meta = NoteMeta.from_dict(load_json(meta_p))
+            if status and meta.status != status:
+                continue
+            if topic and meta.topic != topic:
+                continue
+            out.append(meta)
     out.sort(key=lambda m: m.updated_at, reverse=True)
     return out
 
 
 def find_by_fingerprint(fingerprint: str, exclude: str = "") -> Optional[str]:
     for folder in config.NOTES_DIR.glob("*/*/"):
+        if folder.name not in NOTE_TYPES:
+            continue
         meta_p = folder / "meta.json"
         if not meta_p.exists():
             continue
@@ -163,18 +176,19 @@ def find_by_fingerprint(fingerprint: str, exclude: str = "") -> Optional[str]:
 
 
 def delete_note(note_id: str) -> bool:
-    folder = note_path(note_id, _find_topic(note_id))
+    folder = note_path(note_id, _find_type(note_id))
     if folder.exists():
         shutil.rmtree(folder, ignore_errors=True)
         return True
     return False
 
 
-def _find_topic(note_id: str) -> str:
-    for folder in config.NOTES_DIR.glob("*/"):
-        if (folder / note_id / "meta.json").exists():
-            return folder.name
-    return "默认主题"
+def _find_type(note_id: str) -> str:
+    """在 notes/{source|entity|concept} 下查找笔记所属类型。"""
+    for t in NOTE_TYPES:
+        if (config.NOTES_DIR / t / _safe(note_id) / "meta.json").exists():
+            return t
+    return "source"
 
 
 def _safe(s: str) -> str:

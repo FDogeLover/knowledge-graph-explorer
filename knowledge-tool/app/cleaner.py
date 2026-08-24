@@ -42,8 +42,8 @@ TOPIC_RULES = [
 
 
 def clean_note(note_id: str, topic: str = "") -> dict:
-    """整理单篇：抽关键词、打标签、补摘要。"""
-    note = store.load_note(note_id, topic or None)
+    """整理单篇：抽关键词、打标签、补摘要；source 型还做实体/概念识别与双链。"""
+    note = store.load_note(note_id)
     if not note:
         raise FileNotFoundError(f"笔记不存在: {note_id}")
 
@@ -55,16 +55,37 @@ def clean_note(note_id: str, topic: str = "") -> dict:
     note.meta.tags = sorted(set(tags))
     note.meta.summary = summary
     note.meta.status = "clean"
+
+    # 双链：source → entity / concept（借鉴 Obsidian extract_entities.py）
+    links = {}
+    if note.meta.type == "source":
+        links = link_entities_concepts(note)
+        note.meta.related_entities = links.get("entities", [])
+        note.meta.related_concepts = links.get("concepts", [])
+
     store._write_note(note)
-    return {"note_id": note_id, "keywords": keywords, "tags": note.meta.tags, "summary": summary}
+    return {"note_id": note_id, "keywords": keywords, "tags": note.meta.tags,
+            "summary": summary, "links": links}
 
 
 def clean_all() -> dict:
     metas = store.list_notes()
     results = []
+    created = {"entity": 0, "concept": 0}
     for m in metas:
         try:
             r = clean_note(m.id, m.topic)
+            if r.get("links"):
+                for item in r["links"]["entities"]:
+                    up = upsert_entity_concept(item["name"], item["desc"], "entity",
+                                               m.id, m.topic)
+                    if up["action"] == "created":
+                        created["entity"] += 1
+                for item in r["links"]["concepts"]:
+                    up = upsert_entity_concept(item["name"], item["desc"], "concept",
+                                               m.id, m.topic)
+                    if up["action"] == "created":
+                        created["concept"] += 1
             results.append({"id": m.id, "ok": True})
         except Exception as e:  # noqa: BLE001
             results.append({"id": m.id, "ok": False, "error": str(e)})
@@ -72,15 +93,18 @@ def clean_all() -> dict:
     from . import indexer
     index_summary = indexer.rebuild()
     return {"total": len(metas), "cleaned": sum(1 for r in results if r["ok"]), "results": results,
-            "index": index_summary}
+            "index": index_summary, "skeletons_created": created}
 
 
 def extract_keywords(text: str, top_k: int = 8) -> List[str]:
     if not text or len(text) < 4:
         return []
     try:
-        words = jieba.analyse.extract_tags(text, topK=top_k)
-        return [w for w in words if len(w) > 1][:top_k]
+        # 先剥离 Markdown 语法，避免 `##`、`[[...]]` 等符号混入关键词
+        clean = re.sub(r"\[\[([^\]]+)\]\]", r"\1", text)
+        clean = re.sub(r"[#*`_>|-]", " ", clean)
+        words = jieba.analyse.extract_tags(clean, topK=top_k)
+        return [w for w in words if len(w.strip(" #*`_>|-")) > 1][:top_k]
     except Exception:  # noqa: BLE001
         return []
 
@@ -112,3 +136,75 @@ def summarize(text: str, max_len: int = 120) -> str:
             break
         out += s
     return out or text[:max_len]
+
+
+# ---------- 双链：实体 / 概念识别（借鉴 Obsidian extract_entities.py） ----------
+
+def _parse_link_section(text: str, section: str) -> list:
+    """解析正文中 `## 相关实体 / ## 相关概念` 区块的双链条目。
+    支持 `- [[名称]] - 说明` 与 `| [[名称]] | 类型 | 说明 |` 两种形态。
+    """
+    out = []
+    m = re.search(rf"##\s*{section}\n(.*?)(?=\n##\s|\Z)", text, re.DOTALL)
+    if not m:
+        return out
+    for line in m.group(1).split("\n"):
+        line = line.strip()
+        if not line or line.startswith("|") and ("名称" in line or "---" in line):
+            continue
+        m2 = re.match(r"-\s*\[\[([^\]]+)\]\]\s*[-—]\s*(.+)", line)
+        if m2:
+            out.append({"name": m2.group(1).strip(), "desc": m2.group(2).strip()})
+            continue
+        m2 = re.match(r"\|?\s*\[\[([^\]]+)\]\]\s*\|\s*([^|]+?)\s*\|\s*([^|]+)\s*\|?", line)
+        if m2:
+            out.append({"name": m2.group(1).strip(), "desc": m2.group(3).strip()})
+    # 去重（同名保留首个）
+    seen, uniq = set(), []
+    for item in out:
+        if item["name"] not in seen:
+            seen.add(item["name"])
+            uniq.append(item)
+    return uniq
+
+
+def link_entities_concepts(note) -> dict:
+    """对 source 笔记：识别正文中的实体/概念，返回双链列表与骨架页通道。
+
+    返回 {"entities": [...], "concepts": [...]} —— 均带 type 标记，供建链。
+    """
+    entities = _parse_link_section(note.body, "相关实体")
+    concepts = _parse_link_section(note.body, "相关概念")
+    return {
+        "entities": [{"name": e["name"], "desc": e["desc"], "type": "entity"} for e in entities],
+        "concepts": [{"name": c["name"], "desc": c["desc"], "type": "concept"} for c in concepts],
+    }
+
+
+def upsert_entity_concept(name: str, desc: str, kind: str, source_id: str = "", topic: str = "") -> dict:
+    """创建/更新 entity 或 concept 骨架页（借鉴 Obsidian update_or_create_entity）。
+    kind ∈ entity / concept；已存在则仅更新时间戳，不覆盖内容。
+    """
+    from .models import Note, NoteMeta, now_iso, slugify
+
+    note_id = slugify(name)
+    existing = store.load_meta(note_id)
+    today = now_iso()
+
+    if existing:
+        # 已存在骨架页：仅记录 update（内容保留）
+        return {"id": note_id, "kind": kind, "action": "updated" if source_id else "exists"}
+
+    meta = NoteMeta(
+        id=note_id,
+        title=name,
+        topic=topic or "",
+        type=kind,
+        summary=desc or f"{kind}「{name}」",
+        created_at=today,
+        updated_at=today,
+        status="clean",
+    )
+    body = f"# {name}\n\n## 定义\n{desc or ''}\n" + (f"\n## 相关来源\n- [[{source_id}]]\n" if source_id else "")
+    store._write_note(Note(meta=meta, body=body))
+    return {"id": note_id, "kind": kind, "action": "created"}

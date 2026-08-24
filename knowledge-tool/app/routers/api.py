@@ -47,11 +47,13 @@ def collect(body: dict):
     """采集入口：body 含 url 或 text，返回任务 id（后台执行）。"""
     if body.get("url"):
         task_id = manager.submit("采集链接", collector.collect_url,
-                                 body["url"], body.get("topic", ""), body.get("tags") or None)
+                                 body["url"], body.get("topic", ""), body.get("tags") or None,
+                                 body.get("source_type", "网页"))
     elif body.get("text"):
         task_id = manager.submit("粘贴正文", collector.collect_text,
                                  body["text"], body.get("title", ""),
-                                 body.get("topic", ""), body.get("tags") or None)
+                                 body.get("topic", ""), body.get("tags") or None,
+                                 body.get("source_type", "网页"))
     else:
         raise HTTPException(400, "需要 url 或 text")
     return {"task_id": task_id, "status": "running"}
@@ -59,8 +61,8 @@ def collect(body: dict):
 
 # ---------- notes ----------
 @router.get("/notes")
-def list_notes(topic: str = "", status: str = ""):
-    metas = store.list_notes(topic or None, status or None)
+def list_notes(note_type: str = "", status: str = "", topic: str = ""):
+    metas = store.list_notes(note_type or None, status or None, topic or None)
     return {"total": len(metas), "notes": [m.to_dict() for m in metas]}
 
 
@@ -165,54 +167,68 @@ def tags_list():
 # ---------- graph（知识结构视图数据） ----------
 @router.get("/graph/data")
 def graph_data():
-    """把笔记库聚合为知识图谱数据：主题为节点、共享标签为边。
+    """知识图谱：基于 source→entity→concept 双链关系网（借鉴 Obsidian wiki）。
 
-    供前端「知识结构」图谱视图消费（整合自知识图谱探索器）。
+    节点分三类：来源 source / 实体 entity / 概念 concept；
+    边 = 双链：source→entity（相关实体）、source→concept（相关概念）、
+             entity→concept（同属实体的概念，由共享来源串联）。
     """
     metas = store.list_notes()
-    topic_counter = {}
-    tag_topic = {}
+    by_id = {m.id: m for m in metas}
+    palette = {"source": "#4c8bf5", "entity": "#f59e0b", "concept": "#a855f7"}
+    names = {"source": "来源", "entity": "实体", "concept": "概念"}
+
+    nodes, nids = [], set()
     for m in metas:
-        t = m.topic or "默认主题"
-        topic_counter.setdefault(t, 0)
-        topic_counter[t] += 1
-        for tag in (m.tags or []):
-            tag_topic.setdefault(tag, set()).add(t)
+        if m.id in nids:
+            continue
+        nids.add(m.id)
+        color = palette.get(m.type, "#3b82f6")
+        node_type = names.get(m.type, m.type)
+        nodes.append({
+            "id": m.id, "label": m.title or m.id, "category": node_type,
+            "desc": m.summary or f"{node_type}「{m.title or m.id}」",
+            "color": color, "type": m.type,
+            "qa": [{"q": f"这是什么{node_type}？",
+                    "a": (m.summary or f"{node_type}「{m.title or m.id}」") +
+                         (f"，收录于主题「{m.topic or '未归类'}」。" if m.topic else "。")}],
+        })
 
-    # 节点：主题
-    palette = ["#e04f4f", "#f59e0b", "#2f9e7a", "#3b82f6", "#a855f7"]
-    nodes, used = [], []
-    for i, (t, c) in enumerate(sorted(topic_counter.items(), key=lambda x: -x[1])):
-        color = palette[i % len(palette)]
-        nodes.append({"id": t, "label": t, "category": "主题", "desc": f"主题「{t}」，含 {c} 篇笔记",
-                      "qa": [{"q": f"这个主题收录了什么？", "a": f"共 {c} 篇笔记，可通过笔记库查看。"}],
-                      "color": color})
-        used.append(t)
-
-    # 边：共享标签的相邻主题
+    # 边：仅连接确实存在的节点
     edges, seen = [], set()
-    for tag, topics in tag_topic.items():
-        topics = sorted(topics)
-        for i in range(len(topics) - 1):
-            key = (topics[i], topics[i + 1])
-            if key in seen:
-                continue
-            seen.add(key)
-            edges.append({"from": topics[i], "to": topics[i + 1],
-                          "label": f"共标签·{tag}" if len(topics) == 2 else f"标签链·{tag}"})
 
-    # 若无共享标签边（如各主题只有单篇、标签无交集），补相邻主题弱连接，
-    # 让图谱始终有主干结构，便于浏览同一知识库下的主题全貌。
-    if not edges and len(nodes) > 1:
-        order = sorted(topic_counter)
-        for i in range(len(order) - 1):
-            edges.append({"from": order[i], "to": order[i + 1], "label": "同库相邻"})
+    def link(a_id, b_id, label):
+        if a_id not in by_id or b_id not in by_id:
+            return
+        key = tuple(sorted((a_id, b_id)))
+        if key in seen:
+            return  # 已连过，跳过
+        seen.add(key)
+        edges.append({"from": a_id, "to": b_id, "label": label})
+
+    for m in metas:
+        for e in (m.related_entities or []):
+            name = e.get("name", e) if isinstance(e, dict) else e
+            link(m.id, slug_a(name), f"关联实体")
+        for c in (m.related_concepts or []):
+            name = c.get("name", c) if isinstance(c, dict) else c
+            link(m.id, slug_a(name), f"关联概念")
 
     return {
         "topic": "知识库结构",
         "title": "知识结构 · 知识库工作流工具",
-        "subtitle": "由笔记库实时聚合",
-        "categories": [{"id": "主题", "name": "主题", "color": "#3b82f6"}],
+        "subtitle": "由笔记库双链（source→entity→concept）实时聚合",
+        "categories": [
+            {"id": "来源", "name": "来源", "color": palette["source"]},
+            {"id": "实体", "name": "实体", "color": palette["entity"]},
+            {"id": "概念", "name": "概念", "color": palette["concept"]},
+        ],
         "nodes": nodes,
         "edges": edges,
     }
+
+
+def slug_a(name: str) -> str:
+    """"兄弟 slug：与 cleaner/extract 创建的骨架页 id 一致"""
+    from ..models import slugify
+    return slugify(name)
