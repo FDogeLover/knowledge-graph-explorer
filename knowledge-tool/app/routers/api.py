@@ -74,19 +74,51 @@ def collect(body: dict):
 
 class DirectionBody(BaseModel):
     direction: str
+    template: str = "deep"
 
 
 @router.post("/collect/direction")
 def collect_direction(body: DirectionBody):
-    """AI 采集：操作者只给方向，由 LLM 组织内容并按规范入库（含双链/骨架页）。"""
+    """AI 采集：操作者给方向 + 可选提示词模板，由 LLM 组织内容并按规范入库（含双链/骨架页/个人思考）。"""
     from .. import ai_collector
     if not llm.is_configured():
         raise HTTPException(400, "未配置 LLM API Key（设置页填写 或 环境变量 LLM_API_KEY）")
     direction = body.direction.strip()
     if not direction:
         raise HTTPException(400, "请填写采集方向")
-    task_id = manager.submit("AI方向采集", ai_collector.collect_by_direction, direction)
+    task_id = manager.submit("AI方向采集", ai_collector.collect_by_direction, direction, body.template)
     return {"task_id": task_id, "status": "running"}
+
+
+# ---------- prompts（AI 采集提示词模板） ----------
+from .. import prompts as prompt_mod
+
+
+@router.get("/prompts")
+def prompts_list():
+    from .. import ai_collector
+    return {"templates": prompt_mod.list_templates(), "default": ai_collector.DEFAULT_TEMPLATE}
+
+
+class PromptBody(BaseModel):
+    name: str = ""
+    label: str = ""
+    prompt: str = ""
+
+
+@router.post("/prompts")
+def prompts_save(body: PromptBody):
+    if not body.prompt.strip():
+        raise HTTPException(400, "提示词内容不能为空")
+    tpl = prompt_mod.save_custom_template(body.name or body.label, body.label, body.prompt)
+    return {"ok": True, "template": tpl}
+
+
+@router.delete("/prompts/{name}")
+def prompts_delete(name: str):
+    if not prompt_mod.delete_custom_template(name):
+        raise HTTPException(404, "自定义模板不存在")
+    return {"ok": True}
 
 
 class LLMBody(BaseModel):

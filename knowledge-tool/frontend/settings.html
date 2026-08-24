@@ -64,6 +64,24 @@
     </div>
 
     <div class="panel">
+      <h2>AI 提示词模板</h2>
+      <p style="color:var(--c-dim);font-size:13px;line-height:1.7;margin-bottom:10px">内置模板：资讯速览 / 深度分析（含个人思考）/ 教程讲解。可新增或编辑自定义模板，供 AI 采集页选择。模板正文为系统提示词（要求输出 JSON 时的字段结构由你定义，采集器会用 title/summary/topic/tags/bullet_points/related_entities/related_concepts/thoughts）。</p>
+      <div id="tplList"></div>
+      <div style="margin-top:12px;border-top:1px solid var(--c-border);padding-top:12px">
+        <div class="row">
+          <input id="tplName" type="text" placeholder="模板名（如 行业周报）" />
+          <input id="tplLabel" type="text" placeholder="显示名" />
+        </div>
+        <label>提示词内容</label>
+        <textarea id="tplPrompt" placeholder="粘贴你的系统提示词…" style="min-height:120px"></textarea>
+        <div class="row" style="margin-top:10px">
+          <button class="btn" onclick="saveTpl()">保存模板</button>
+          <span style="color:var(--c-dim);font-size:12px;align-self:center" id="tplStatus"></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
       <h2>定时调度</h2>
       <p style="color:var(--c-dim);font-size:13px;line-height:1.7;margin-bottom:10px">配置 cron 定时任务，到点自动执行采集/整理/日报（后台调度器，随服务启动运行）。cron 5 段：<code>分 时 日 月 周</code>，如 <code>0 8 * * *</code>=每天 08:00。</p>
       <div class="row">
@@ -163,7 +181,42 @@
     }
     async function toggleSchedule(id) { try { await api.post("/api/schedules/" + id + "/toggle"); loadSchedules(); } catch (e) { toast(e.message, true); } }
     async function delSchedule(id) { if (!confirm("删除定时任务？")) return; try { await api.del("/api/schedules/" + id); toast("已删除"); loadSchedules(); } catch (e) { toast(e.message, true); } }
-    loadSchedules();
+
+    // ---- AI 提示词模板 ----
+    async function loadTpls() {
+      try {
+        var d = await api.get("/api/prompts");
+        var el = document.getElementById("tplList");
+        el.innerHTML = "";
+        d.templates.forEach(function (t) {
+          var row = document.createElement("div");
+          row.style.cssText = "display:flex;align-items:center;gap:10px;margin:5px 0;padding:8px 10px;border:1px solid var(--c-border);border-radius:8px;background:rgba(255,255,255,.03)";
+          var badge = t.builtin ? '<span class="tag">内置</span>' : '<span class="tag" style="background:rgba(245,158,11,.14);color:#f3cf9b">自定义</span>';
+          row.innerHTML =
+            '<span style="flex:1">' + badge + ' <b>' + scEsc(t.label) + '</b> <span style="color:var(--c-dim);font-size:11px">(' + scEsc(t.name) + ')</span></span>' +
+            '<button class="btn ghost" style="padding:3px 9px;font-size:11px" onclick="viewTpl(\'' + scEsc(t.name) + '\',\'' + scEsc(t.prompt.replace(/\n/g,"\\n")) + '\',' + (t.builtin ? 'true' : 'false') + ')">查看</button>' +
+            (t.builtin ? "" : '<button class="btn ghost" style="padding:3px 9px;font-size:11px;color:#e04f4f" onclick="delTpl(\'' + scEsc(t.name) + '\')">删除</button>');
+          el.appendChild(row);
+        });
+        // 同步到采集页下拉无法直接改他页——放在这里展示即可
+      } catch (e) { toast("加载模板失败：" + e.message, true); }
+    }
+    function viewTpl(name, prompt, builtin) {
+      document.getElementById("tplName").value = builtin ? "" : name;
+      document.getElementById("tplLabel").value = builtin ? "" : name;
+      document.getElementById("tplPrompt").value = prompt;
+      document.getElementById("tplStatus").textContent = builtin ? "内置模板已载入：改名后保存将生成自定义模板" : "已载入模板「" + name + "」，可直接修改后保存";
+    }
+    async function saveTpl() {
+      var name = document.getElementById("tplName").value.trim();
+      var label = document.getElementById("tplLabel").value.trim();
+      var prompt = document.getElementById("tplPrompt").value;
+      if (!name || !prompt.trim()) return toast("请填模板名与提示词内容", true);
+      try { await api.post("/api/prompts", { name: name, label: label, prompt: prompt }); toast("模板已保存 ✅"); loadTpls(); }
+      catch (e) { toast("保存失败：" + e.message, true); }
+    }
+    async function delTpl(name) { if (!confirm("删除模板 " + name + "？")) return; try { await api.del("/api/prompts/" + encodeURIComponent(name)); toast("已删除"); loadTpls(); } catch (e) { toast(e.message, true); } }
+    loadTpls();
     load();
   </script>
 </body>
