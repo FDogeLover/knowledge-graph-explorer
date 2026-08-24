@@ -108,6 +108,50 @@ tr:hover td { background: rgba(255,255,255,0.03); }
 }
 .res-text:hover { color: var(--c-text); }
 
+/* ===== 自定义下拉（接管原生 select，暗色菜单彻底可读） =====
+   原生 <option> 展开列表由操作系统渲染（常为白底/白字），CSS 无法完全控制；
+   此组件用 div 渲染列表，统一深色主题，各状态高对比。 */
+.ui-select { position: relative; display: inline-block; width: 100%; font-size: 13.5px; }
+.ui-select select {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  opacity: 0 !important; pointer-events: none; border: 0; background: transparent;
+  visibility: hidden;   /* 彻底隐藏原生控件，仅保留 value/options 供 JS 读取 */
+}
+.ui-sel-box {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  padding: 9px 12px; border-radius: 9px; cursor: pointer; user-select: none;
+  background: #1E222D; border: 1px solid var(--c-border); color: #E2E8F0;
+  transition: border-color .18s, background .18s;
+}
+.ui-sel-box:hover { border-color: rgba(255,255,255,.24); background: #232838; }
+.ui-sel-box.open { border-color: #4c8bf5; background: #232838; }
+.ui-sel-box .val {
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  color: #E2E8F0; font-size: 13px;
+}
+.ui-sel-box .arrow {
+  width: 0; height: 0; flex-shrink: 0;
+  border-left: 5px solid transparent; border-right: 5px solid transparent;
+  border-top: 6px solid #9aa8bb; transition: transform .18s;
+}
+.ui-sel-box.open .arrow { transform: rotate(180deg); border-top-color: #7fb2ff; }
+.ui-sel-list {
+  position: absolute; top: calc(100% + 4px); left: 0; right: 0; min-width: 100%;
+  max-height: 260px; overflow: auto; z-index: 200; display: none;
+  background: #1E222D; border: 1px solid rgba(255,255,255,.14); border-radius: 10px;
+  box-shadow: 0 10px 30px rgba(0,0,0,.6); padding: 4px;
+}
+.ui-sel-list.open { display: block; }
+.ui-sel-item {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  padding: 8px 10px; border-radius: 7px; cursor: pointer;
+  color: #CBD5E1; font-size: 13px; line-height: 1.4; transition: background .12s, color .12s;
+}
+.ui-sel-item:hover { background: #374151; color: #fff; }
+.ui-sel-item.sel { background: rgba(76,139,245,.20); color: #fff; }
+.ui-sel-item .tick { opacity: 0; color: #7fb2ff; font-weight: 700; }
+.ui-sel-item.sel .tick { opacity: 1; }
+
 @media (max-width: 860px) {
   .topbar { flex-wrap: nowrap; padding: 8px 10px; gap: 6px; }
   .brand { font-size: 13px; margin-right: 0; }
