@@ -79,7 +79,8 @@ def _find_existing_skeleton(name: str, kind: str) -> str | None:
     target = (name or "").strip()
     if not target:
         return None
-    nid = store.slugify(target)
+    from .models import slugify
+    nid = slugify(target)
     if store.load_meta(nid):
         return nid
     base = store.config.NOTES_DIR / kind
