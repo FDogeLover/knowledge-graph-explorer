@@ -103,8 +103,15 @@
     .legend-modal .lm-dot { width: 14px; height: 14px; border-radius: 50%; flex-shrink: 0; }
     .legend-modal .lm-dot.card { border-radius: 5px; }
 
-    /* 连线穿透：画布层 z-index 1 < 节点20 < 面板50；面板不穿透 */
+    /* 连线穿透：画布层 z-index 1 < 节点20 < 面板60；面板不穿透 */
     .g-detail { position: absolute; top: 50px; right: 12px; width: 320px; max-height: calc(100% - 66px); overflow: auto; border: 1px solid var(--c-border); border-radius: 12px; background: rgba(11,17,27,0.96); padding: 16px; z-index: 60; box-shadow: 0 8px 30px rgba(0,0,0,.5); }
+    .g-detail-close {
+      position: absolute; top: 10px; right: 10px; width: 26px; height: 26px; padding: 0;
+      display: flex; align-items: center; justify-content: center; cursor: pointer; border: none;
+      border-radius: 50%; background: rgba(255,255,255,.08); color: var(--c-dim);
+      font-size: 13px; line-height: 1; transition: all .15s;
+    }
+    .g-detail-close:hover { background: rgba(255,255,255,.18); color: #fff; }
     .g-detail .d-type { display: inline-block; padding: 2px 9px; border-radius: 999px; font-size: 10.5px; letter-spacing: 1px; border: 1px solid; margin-bottom: 10px; }
     .g-detail .d-title { font-size: 19px; font-weight: 700; margin: 2px 0 10px; line-height: 1.35; }
     .g-detail .d-desc { font-size: 13.5px; color: #d3dbe8; line-height: 1.7; }
@@ -400,7 +407,8 @@
         d.hidden = false;
         var typeLabel = ({ source: "来源", entity: "实体", concept: "概念" })[nd.type] || "节点";
         var kw = (nd.keywords || []).slice(0, 10);
-        var html = '<span class="d-type" style="color:' + nd.color + '">' + typeLabel + "</span>";
+        var html = '<button class="g-detail-close" title="关闭详情" aria-label="关闭">✕</button>';
+        html += '<span class="d-type" style="color:' + nd.color + '">' + typeLabel + "</span>";
         html += '<div class="d-title">' + esc(nd.label) + "</div>";
         // 正文优先（富文本 Markdown 渲染）；无正文则用摘要
         var bodyMd = (nd.body || "").trim();
@@ -440,6 +448,9 @@
         }
         if (nd.url) html += '<a class="d-link" href="' + esc(nd.url) + '" target="_blank" rel="noopener">↗ 原文链接</a>';
         d.innerHTML = html;
+        // 关闭按钮：隐藏面板（不重触发 focus，保持图面聚焦态）
+        var closeBtn = d.querySelector(".g-detail-close");
+        if (closeBtn) closeBtn.onclick = function () { d.hidden = true; };
         d.querySelectorAll(".rel-chip").forEach(function (chip) {
           chip.onclick = function () {
             var to = chip.dataset.goto;
