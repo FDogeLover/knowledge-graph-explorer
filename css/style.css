@@ -62,7 +62,9 @@ html { touch-action: manipulation; }
 .topbar {
   position: relative; z-index: 120; /* 高于画布层，保证主题菜单不被覆盖 */
   display: flex; align-items: center; gap: 18px;
-  margin: 12px 16px 8px; padding: 9px 16px;
+  margin: 12px 16px 8px;
+  /* 顶部安全区：真机 env() 生效，PC 模拟器用注入变量（=0 时保持 9px） */
+  padding: calc(var(--safe-area-inset-top, env(safe-area-inset-top, 0px)) + 9px) 16px 9px;
   border-radius: var(--radius);
 }
 .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; letter-spacing: .3px; white-space: nowrap; }
@@ -383,11 +385,11 @@ html { touch-action: manipulation; }
 /* 移动端：重新设计布局层级（精简导航 / 分散节点 / Bottom Sheet / Safe Area） */
 @media (max-width: 700px) {
   /* —— 顶部导航：单行紧凑 —— */
-  .topbar { flex-wrap: nowrap; gap: 6px; margin: 8px 8px 4px; padding: 8px 10px; }
+  .topbar { flex-wrap: nowrap; gap: 6px; margin: 8px 8px 4px; padding: calc(var(--safe-area-inset-top, env(safe-area-inset-top, 0px)) + 8px) 10px 8px; }
   .brand-name { display: none; }              /* 只留 logo 点，省出横向空间 */
   .brand-dot { width: 8px; height: 8px; }
   .nav-actions { flex: 0 0 auto; order: 0; }
-  .theme-menu { top: 54px; left: 8px; right: auto; max-width: 78vw; }
+  .theme-menu { top: calc(var(--safe-area-inset-top, env(safe-area-inset-top, 0px)) + 54px); left: 8px; right: auto; max-width: 78vw; }
   .top-right { margin-left: 0; flex: 1; min-width: 0; }
   .search { width: 100%; }
   .search input { font-size: 12.5px; }
@@ -409,7 +411,7 @@ html { touch-action: manipulation; }
 
   /* —— 图例：顶部紧凑条 + safe-area —— */
   .legend {
-    left: 8px; right: 8px; bottom: auto; top: 60px;
+    left: 8px; right: 8px; bottom: auto; top: calc(var(--safe-area-inset-top, env(safe-area-inset-top, 0px)) + 60px);
     flex-direction: row; flex-wrap: wrap; gap: 3px 8px;
     min-width: 0; padding: 6px 10px; width: auto;
   }
