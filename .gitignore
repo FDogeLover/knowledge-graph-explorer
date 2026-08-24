@@ -21,6 +21,10 @@ _tmp/
 # 临时 / 缓存
 __pycache__/
 *.pyc
+
+# 小工具上传素材（图标等，不入库）
+/图标.png
+*.zip
 .venv/
 *.local
 
