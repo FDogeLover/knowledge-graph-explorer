@@ -54,6 +54,7 @@ class NoteMeta:
     date_published: str = ""        # 原文发布日期
     related_entities: list = field(default_factory=list)   # 双链：相关实体
     related_concepts: list = field(default_factory=list)   # 双链：相关概念
+    raw_text: str = ""              # 原始全文（AI 提炼时保留原文，供追溯）
 
     def to_dict(self) -> dict:
         return asdict(self)
