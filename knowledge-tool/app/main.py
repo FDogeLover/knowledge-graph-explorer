@@ -12,6 +12,25 @@ from .routers import api
 
 app = FastAPI(title="知识库工作流工具", version="0.1.0", description="把网页采集→整理→日报沉淀为本地 Web 管理台")
 
+
+@app.on_event("startup")
+def _start_scheduler():
+    """启动定时调度器（后台线程，读 data/schedules.json 按 cron 触发任务）。"""
+    try:
+        from . import scheduler
+        scheduler.start()
+    except Exception:  # noqa: BLE001
+        pass
+
+
+@app.on_event("shutdown")
+def _stop_scheduler():
+    try:
+        from . import scheduler
+        scheduler.stop()
+    except Exception:  # noqa: BLE001
+        pass
+
 app.include_router(api.router)
 
 # 托管原生前端静态资源

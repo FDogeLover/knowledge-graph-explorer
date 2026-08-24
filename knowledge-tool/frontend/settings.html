@@ -64,6 +64,27 @@
     </div>
 
     <div class="panel">
+      <h2>定时调度</h2>
+      <p style="color:var(--c-dim);font-size:13px;line-height:1.7;margin-bottom:10px">配置 cron 定时任务，到点自动执行采集/整理/日报（后台调度器，随服务启动运行）。cron 5 段：<code>分 时 日 月 周</code>，如 <code>0 8 * * *</code>=每天 08:00。</p>
+      <div class="row">
+        <input id="scName" type="text" placeholder="任务名（如：每日AI采集）" />
+        <select id="scAction">
+          <option value="clean">定时整理（全库）</option>
+          <option value="report">定时日报</option>
+          <option value="collect">定时AI采集</option>
+        </select>
+        <input id="scCron" type="text" placeholder="0 8 * * *" />
+        <input id="scDir" type="text" placeholder="采集方向（action=AI采集时必填）" />
+        <button class="btn" onclick="addSchedule()">添加定时任务</button>
+      </div>
+      <div style="margin-top:14px;font-size:12.5px" id="scStatus"></div>
+      <table style="margin-top:12px">
+        <thead><tr><th>任务</th><th>动作</th><th>cron</th><th>方向</th><th>状态</th><th>上次运行</th><th>操作</th></tr></thead>
+        <tbody id="scBody"><tr><td colspan="7" style="color:var(--c-dim)">暂无定时任务</td></tr></tbody>
+      </table>
+    </div>
+
+    <div class="panel">
       <h2>关于正式版</h2>
       <p style="color:var(--c-dim);font-size:13px;line-height:1.7">
         正式完整版 =「知识库工作流工具」（Python + FastAPI + 原生前端 + 文件数据层，Linux/Docker 部署）。
@@ -104,6 +125,45 @@
         document.getElementById("llmKey").value = "";
       } catch (e) { toast("保存失败：" + e.message, true); }
     }
+    function scEsc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
+    async function loadSchedules() {
+      try {
+        var d = await api.get("/api/schedules");
+        var body = document.getElementById("scBody");
+        body.innerHTML = "";
+        if (!d.schedules.length) { body.innerHTML = '<tr><td colspan="7" style="color:var(--c-dim)">暂无定时任务</td></tr>'; document.getElementById("scStatus").textContent = ""; return; }
+        d.schedules.forEach(function (s) {
+          var tr = document.createElement("tr");
+          var st = s.enabled ? '<span style="color:#2f9e7a">启用</span>' : '<span style="color:#e04f4f">停用</span>';
+          var last = s.last_run ? (s.last_run + (s.last_status ? " · " + s.last_status : "")) : "—";
+          tr.innerHTML =
+            "<td><b>" + scEsc(s.name) + "</b></td>" +
+            "<td>" + scEsc(s.action) + "</td>" +
+            "<td><code>" + scEsc(s.cron) + "</code></td>" +
+            "<td>" + scEsc(s.direction || "—") + "</td>" +
+            "<td>" + st + "</td>" +
+            "<td style='font-size:11px;color:var(--c-dim)'>" + scEsc(last) + "</td>" +
+            '<td><button class="btn ghost" style="padding:3px 9px;font-size:11px" onclick="toggleSchedule(\'' + s.id + '\')">' + (s.enabled ? "停用" : "启用") + '</button> ' +
+            '<button class="btn ghost" style="padding:3px 9px;font-size:11px;color:#e04f4f" onclick="delSchedule(\'' + s.id + '\')">删除</button></td>';
+          body.appendChild(tr);
+        });
+        document.getElementById("scStatus").textContent = "共 " + d.schedules.length + " 个定时任务";
+      } catch (e) { toast("加载定时任务失败：" + e.message, true); }
+    }
+    async function addSchedule() {
+      var body = {
+        name: document.getElementById("scName").value.trim(),
+        action: document.getElementById("scAction").value,
+        cron: document.getElementById("scCron").value.trim() || "0 8 * * *",
+        direction: document.getElementById("scDir").value.trim(),
+      };
+      if (!body.name) return toast("请填写任务名", true);
+      try { await api.post("/api/schedules", body); toast("定时任务已添加 ✅"); document.getElementById("scName").value = ""; loadSchedules(); }
+      catch (e) { toast("添加失败：" + e.message, true); }
+    }
+    async function toggleSchedule(id) { try { await api.post("/api/schedules/" + id + "/toggle"); loadSchedules(); } catch (e) { toast(e.message, true); } }
+    async function delSchedule(id) { if (!confirm("删除定时任务？")) return; try { await api.del("/api/schedules/" + id); toast("已删除"); loadSchedules(); } catch (e) { toast(e.message, true); } }
+    loadSchedules();
     load();
   </script>
 </body>

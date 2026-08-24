@@ -159,6 +159,64 @@ def search(q: str = "", topic: str = "", tag: str = ""):
     return {"results": indexer.search(q, topic, tag)}
 
 
+# ---------- schedules（定时调度） ----------
+from .. import scheduler as sched
+
+
+class ScheduleBody(BaseModel):
+    id: str = ""
+    name: str = ""
+    action: str = "clean"          # collect / clean / report
+    cron: str = "0 8 * * *"
+    enabled: bool = True
+    direction: str = ""
+
+
+@router.get("/schedules")
+def schedules_list():
+    return {"schedules": sched.load_schedules(), "actions": {k: v[0] for k, v in sched.ACTIONS.items()}}
+
+
+@router.post("/schedules")
+def schedules_add(body: ScheduleBody):
+    try:
+        item = sched.add_schedule(body.name or body.action, body.action, body.cron,
+                                  enabled=body.enabled, direction=body.direction)
+    except ValueError as e:
+        raise HTTPException(400, str(e)) from e
+    return {"ok": True, "schedule": item}
+
+
+@router.put("/schedules/{sid}")
+def schedules_update(sid: str, body: ScheduleBody):
+    try:
+        item = sched.update_schedule(sid, name=body.name, action=body.action, cron=body.cron,
+                                     enabled=body.enabled, direction=body.direction)
+    except ValueError as e:
+        raise HTTPException(400, str(e)) from e
+    if not item:
+        raise HTTPException(404, "定时任务不存在")
+    return {"ok": True, "schedule": item}
+
+
+@router.delete("/schedules/{sid}")
+def schedules_delete(sid: str):
+    if not sched.delete_schedule(sid):
+        raise HTTPException(404, "定时任务不存在")
+    return {"ok": True}
+
+
+@router.post("/schedules/{sid}/toggle")
+def schedules_toggle(sid: str):
+    cur = next((i for i in sched.load_schedules() if i.get("id") == sid), None)
+    if not cur:
+        raise HTTPException(404, "定时任务不存在")
+    item = sched.update_schedule(sid, enabled=not cur.get("enabled", True))
+    if not item:
+        raise HTTPException(404, "定时任务不存在")
+    return {"ok": True, "schedule": item}
+
+
 # ---------- reports ----------
 @router.post("/reports/daily")
 def gen_daily():
