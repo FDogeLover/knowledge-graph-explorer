@@ -1,0 +1,30 @@
+{
+  "id": "博通-Broadcom",
+  "title": "博通（Broadcom）",
+  "source_url": null,
+  "created_at": "2026-08-24 18:41:31",
+  "updated_at": "2026-08-24 18:41:31",
+  "topic": "示例·AI科技",
+  "tags": [
+    "AI"
+  ],
+  "keywords": [
+    "OpenAI",
+    "芯片",
+    "Broadcom",
+    "2026",
+    "06",
+    "08",
+    "Anthropic",
+    "博通"
+  ],
+  "summary": "OpenAI芯片项目的合作方",
+  "status": "clean",
+  "fingerprint": "",
+  "type": "entity",
+  "source_type": "",
+  "date_published": "",
+  "related_entities": [],
+  "related_concepts": [],
+  "raw_text": ""
+}

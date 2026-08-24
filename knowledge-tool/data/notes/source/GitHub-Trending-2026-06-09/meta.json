@@ -1,0 +1,71 @@
+{
+  "id": "GitHub-Trending-2026-06-09",
+  "title": "GitHub Trending 2026-06-09",
+  "source_url": "https://github.com/trending",
+  "created_at": "2026-06-09",
+  "updated_at": "2026-06-09",
+  "topic": "示例·AI科技",
+  "tags": [
+    "AI",
+    "GitHub",
+    "Trending",
+    "产品设计",
+    "开源",
+    "营销运营"
+  ],
+  "keywords": [
+    "日增",
+    "turbovec",
+    "AI",
+    "last30days",
+    "skill",
+    "Agent",
+    "3558",
+    "supervision"
+  ],
+  "summary": "今日GitHub Trending采集16个项目。日增冠军last30days-skill（+3558⭐），亚军turbovec（+1729⭐），季军supervision（+1288⭐）。三条主线：AI Agent技能生态、向量数据库与AI基础设施、LLM生态工具链。",
+  "status": "clean",
+  "fingerprint": "ec38cd1b695d549ec980f6f98cb98ee519951c22",
+  "type": "source",
+  "source_type": "GitHub",
+  "date_published": "2026-06-09",
+  "related_entities": [
+    {
+      "name": "last30days-skill",
+      "desc": "日增第1",
+      "type": "entity"
+    },
+    {
+      "name": "RyanCodrai-turbovec",
+      "desc": "日增第2",
+      "type": "entity"
+    },
+    {
+      "name": "roboflow-supervision",
+      "desc": "日增第3",
+      "type": "entity"
+    },
+    {
+      "name": "refactoringhq-tolaria",
+      "desc": "日增第4",
+      "type": "entity"
+    },
+    {
+      "name": "aaif-goose-goose",
+      "desc": "日增第5",
+      "type": "entity"
+    },
+    {
+      "name": "Agent-Reach",
+      "desc": "日增第6",
+      "type": "entity"
+    },
+    {
+      "name": "CopilotKit",
+      "desc": "日增第9",
+      "type": "entity"
+    }
+  ],
+  "related_concepts": [],
+  "raw_text": ""
+}

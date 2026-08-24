@@ -1,0 +1,13 @@
+{
+  "id": "string",
+  "title": "string",
+  "source_url": "string|null",
+  "created_at": "datetime",
+  "updated_at": "datetime",
+  "topic": "string",
+  "tags": "string[]",
+  "keywords": "string[]",
+  "summary": "string",
+  "status": "draft|clean|archived",
+  "fingerprint": "string"
+}

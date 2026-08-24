@@ -1,0 +1,31 @@
+{
+  "id": "Hugging-Face",
+  "title": "Hugging Face",
+  "source_url": null,
+  "created_at": "2026-08-24 21:33:58",
+  "updated_at": "2026-08-24 21:33:58",
+  "topic": "科技",
+  "tags": [
+    "AI",
+    "编程"
+  ],
+  "keywords": [
+    "开源",
+    "国产",
+    "模型",
+    "Hugging",
+    "Face",
+    "AI",
+    "全球",
+    "评测"
+  ],
+  "summary": "全球最大AI社区，是国产开源模型发布、下载和评测的核心平台。",
+  "status": "clean",
+  "fingerprint": "",
+  "type": "entity",
+  "source_type": "",
+  "date_published": "",
+  "related_entities": [],
+  "related_concepts": [],
+  "raw_text": ""
+}

@@ -1,0 +1,31 @@
+{
+  "id": "自主可控-Self-reliance",
+  "title": "自主可控（Self-reliance）",
+  "source_url": null,
+  "created_at": "2026-08-24 21:33:58",
+  "updated_at": "2026-08-24 21:33:58",
+  "topic": "科技",
+  "tags": [
+    "AI",
+    "编程"
+  ],
+  "keywords": [
+    "开源",
+    "模型",
+    "Self",
+    "reliance",
+    "闭源",
+    "可控",
+    "国产",
+    "生态"
+  ],
+  "summary": "在外部限制下，通过开源技术栈降低对国外闭源模型的依赖。",
+  "status": "clean",
+  "fingerprint": "",
+  "type": "concept",
+  "source_type": "",
+  "date_published": "",
+  "related_entities": [],
+  "related_concepts": [],
+  "raw_text": ""
+}

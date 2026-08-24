@@ -1,0 +1,30 @@
+{
+  "id": "华为",
+  "title": "华为",
+  "source_url": null,
+  "created_at": "2026-08-24 19:15:38",
+  "updated_at": "2026-08-24 19:15:38",
+  "topic": "科技",
+  "tags": [
+    "营销运营"
+  ],
+  "keywords": [
+    "智驾",
+    "2026",
+    "华为",
+    "玩家",
+    "解决方案",
+    "产业链",
+    "定义",
+    "智能"
+  ],
+  "summary": "智能汽车解决方案核心玩家，推动智驾产业链发展",
+  "status": "clean",
+  "fingerprint": "",
+  "type": "entity",
+  "source_type": "",
+  "date_published": "",
+  "related_entities": [],
+  "related_concepts": [],
+  "raw_text": ""
+}

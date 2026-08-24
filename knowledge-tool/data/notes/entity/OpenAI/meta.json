@@ -1,0 +1,43 @@
+{
+  "id": "OpenAI",
+  "title": "OpenAI",
+  "source_url": null,
+  "created_at": "2026-06-09 00:00:00",
+  "updated_at": "2026-08-24",
+  "topic": "示例·AI科技",
+  "tags": [
+    "AI",
+    "AI安全审查",
+    "ChatGPT",
+    "IPO",
+    "产品设计",
+    "军事AI",
+    "商业金融",
+    "大模型",
+    "科学",
+    "管理",
+    "编程",
+    "自研芯片",
+    "营销运营",
+    "资讯"
+  ],
+  "keywords": [
+    "2026",
+    "07",
+    "AI",
+    "GPT",
+    "OpenAI",
+    "08",
+    "06",
+    "科技动态"
+  ],
+  "summary": "# OpenAI > ChatGPT 和 GPT 系列大模型的开发者 ## 基本信息 - **类型**: AI 研究公司 - **主要产品**: ChatGPT、GPT系列、Codex、Jalapeño芯片 - **竞争对手**: Goog",
+  "status": "clean",
+  "fingerprint": "c63327754c79f717b988d475e529b34b7eeac810",
+  "type": "entity",
+  "source_type": "",
+  "date_published": "",
+  "related_entities": [],
+  "related_concepts": [],
+  "raw_text": ""
+}

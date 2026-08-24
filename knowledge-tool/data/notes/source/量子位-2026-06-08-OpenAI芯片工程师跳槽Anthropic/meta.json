@@ -1,0 +1,69 @@
+{
+  "id": "量子位-2026-06-08-OpenAI芯片工程师跳槽Anthropic",
+  "title": "量子位-2026-06-08-OpenAI芯片工程师跳槽Anthropic",
+  "source_url": "https://www.qbitai.com/2026/06/431499.html",
+  "created_at": "2026-06-08",
+  "updated_at": "2026-06-08",
+  "topic": "示例·AI科技",
+  "tags": [
+    "AI",
+    "AI芯片",
+    "Anthropic",
+    "Clive Chan",
+    "OpenAI",
+    "产品设计",
+    "人才流动",
+    "科学"
+  ],
+  "keywords": [
+    "OpenAI",
+    "Anthropic",
+    "芯片",
+    "Clive",
+    "Chan",
+    "量产",
+    "AI",
+    "跳槽"
+  ],
+  "summary": "OpenAI硬件组第二号员工Clive Chan在量产前夜跳槽Anthropic，将主导Anthropic自研芯片项目。",
+  "status": "clean",
+  "fingerprint": "4fd2e92b8d5b9555ad7ac29aff59fe9e8d533a61",
+  "type": "source",
+  "source_type": "P1 权威媒体",
+  "date_published": "2026-06-08",
+  "related_entities": [
+    {
+      "name": "OpenAI",
+      "desc": "Clive Chan的前雇主，芯片项目受影响",
+      "type": "entity"
+    },
+    {
+      "name": "Anthropic",
+      "desc": "Clive Chan的新雇主，芯片项目加速",
+      "type": "entity"
+    },
+    {
+      "name": "Clive Chan",
+      "desc": "核心人物，OpenAI硬件组第二号员工",
+      "type": "entity"
+    },
+    {
+      "name": "博通（Broadcom）",
+      "desc": "OpenAI芯片项目的合作方",
+      "type": "entity"
+    }
+  ],
+  "related_concepts": [
+    {
+      "name": "AI芯片人才争夺战",
+      "desc": "Anthropic挖角OpenAI核心芯片工程师",
+      "type": "concept"
+    },
+    {
+      "name": "AI全栈能力竞争",
+      "desc": "Anthropic加速构建全栈能力",
+      "type": "concept"
+    }
+  ],
+  "raw_text": ""
+}

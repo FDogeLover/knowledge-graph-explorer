@@ -1,0 +1,34 @@
+{
+  "id": "AI全栈能力竞争",
+  "title": "AI全栈能力竞争",
+  "source_url": null,
+  "created_at": "2026-06-09 00:00:00",
+  "updated_at": "2026-08-19",
+  "topic": "示例·AI科技",
+  "tags": [
+    "AI",
+    "全栈",
+    "模型",
+    "算力",
+    "芯片"
+  ],
+  "keywords": [
+    "全栈",
+    "芯片",
+    "Anthropic",
+    "AI",
+    "Clive",
+    "Chan",
+    "2026",
+    "竞争"
+  ],
+  "summary": "AI巨头从单一模型能力竞争转向\"模型+芯片+算力\"全栈能力竞争。",
+  "status": "clean",
+  "fingerprint": "cb0acdedcd9ff5a5c87b60ba5a3fc08b8f716e4f",
+  "type": "concept",
+  "source_type": "",
+  "date_published": "",
+  "related_entities": [],
+  "related_concepts": [],
+  "raw_text": ""
+}

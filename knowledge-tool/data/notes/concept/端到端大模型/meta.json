@@ -1,0 +1,30 @@
+{
+  "id": "端到端大模型",
+  "title": "端到端大模型",
+  "source_url": null,
+  "created_at": "2026-08-24 19:22:55",
+  "updated_at": "2026-08-24 19:22:55",
+  "topic": "科技",
+  "tags": [
+    "AI"
+  ],
+  "keywords": [
+    "驾驶",
+    "自动",
+    "端到",
+    "特斯拉",
+    "神经网络",
+    "架构",
+    "感知",
+    "定义"
+  ],
+  "summary": "从感知到决策的单一神经网络自动驾驶架构",
+  "status": "clean",
+  "fingerprint": "",
+  "type": "concept",
+  "source_type": "",
+  "date_published": "",
+  "related_entities": [],
+  "related_concepts": [],
+  "raw_text": ""
+}

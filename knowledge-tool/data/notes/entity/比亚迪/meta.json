@@ -1,0 +1,30 @@
+{
+  "id": "比亚迪",
+  "title": "比亚迪",
+  "source_url": null,
+  "created_at": "2026-08-24 19:15:38",
+  "updated_at": "2026-08-24 19:15:38",
+  "topic": "科技",
+  "tags": [
+    "营销运营"
+  ],
+  "keywords": [
+    "新能源",
+    "车企",
+    "2026",
+    "迭代",
+    "价格战",
+    "比亚迪",
+    "引领",
+    "定义"
+  ],
+  "summary": "国内新能源车销量领先车企，引领价格战与技术迭代",
+  "status": "clean",
+  "fingerprint": "",
+  "type": "entity",
+  "source_type": "",
+  "date_published": "",
+  "related_entities": [],
+  "related_concepts": [],
+  "raw_text": ""
+}
