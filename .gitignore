@@ -15,8 +15,11 @@ Thumbs.db
 .skill/
 _tmp/
 
-# 正式完整版（知识库工作流工具）独立仓库，不混入预览版
-/knowledge-tool/
+# 正式版（知识库工作流工具）作为子目录共享仓库；内部 data/（用户知识库）与缓存不入库
+/knowledge-tool/app/__pycache__/
+/knowledge-tool/data/
+/knowledge-tool/.venv/
+/knowledge-tool/.commandcode/
 
 # 临时 / 缓存
 __pycache__/

@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>笔记库 · 知识库工作流工具</title>
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand"><span class="brand-dot"></span>知识库工作流工具</div>
+    <nav class="nav">
+      <a href="/">总览</a>
+      <a href="/collect">采集</a>
+      <a href="/clean">整理</a>
+      <a href="/report">报告</a>
+      <a href="/library" class="active">笔记库</a>
+      <a href="/graph-page">知识结构</a>
+      <a href="/tasks">任务</a>
+      <a href="/settings">设置</a>
+      <a href="/wizard">初始化向导</a>
+    </nav>
+  </header>
+
+  <div class="wrap">
+    <h1>笔记库</h1>
+    <p class="sub">检索、过滤、查看详情。点标题展开正文。</p>
+
+    <div class="panel">
+      <div class="row">
+        <input id="q" type="text" placeholder="搜索标题/正文/标签/关键词…" oninput="debounced()" />
+        <input id="qTopic" type="text" placeholder="主题过滤" oninput="debounced()" />
+        <input id="qTag" type="text" placeholder="标签过滤" oninput="debounced()" />
+      </div>
+      <div style="margin-top:10px"><button class="btn" onclick="load()">搜索</button><span style="margin-left:10px;color:var(--c-dim);font-size:12px" id="count"></span></div>
+    </div>
+
+    <div id="list"></div>
+  </div>
+
+  <script src="/js/common.js"></script>
+  <script>
+    var timer = null;
+    function debounced() { clearTimeout(timer); timer = setTimeout(load, 350); }
+    function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
+
+    async function load() {
+      var q = document.getElementById("q").value.trim();
+      var topic = document.getElementById("qTopic").value.trim();
+      var tag = document.getElementById("qTag").value.trim();
+      var params = new URLSearchParams();
+      if (q) params.set("q", q);
+      if (topic) params.set("topic", topic);
+      if (tag) params.set("tag", tag);
+      try {
+        var d = await api.get("/api/search?" + params.toString());
+        var el = document.getElementById("list");
+        el.innerHTML = d.results.length ? "" : '<div style="color:var(--c-dim)">无匹配笔记</div>';
+        document.getElementById("count").textContent = "共 " + d.results.length + " 条";
+        d.results.forEach(function (n) { el.appendChild(renderNote(n)); });
+      } catch (e) { toast("加载失败：" + e.message, true); }
+    }
+
+    function renderNote(n) {
+      var item = document.createElement("div");
+      item.className = "note-item";
+      item.innerHTML =
+        '<div class="t" style="cursor:pointer" onclick="toggleBody(this)">▸ ' + esc(n.title) + "</div>" +
+        '<div class="m">' + esc(n.topic || "默认主题") + " · " + esc(n.id) + "</div>" +
+        (n.summary ? '<div class="m">摘要：' + esc(n.summary) + "</div>" : "") +
+        '<div>' + (n.tags || []).map(function (t) { return '<span class="tag">' + esc(t) + "</span>"; }).join("") + "</div>" +
+        '<div class="body" hidden style="margin-top:8px;white-space:pre-wrap;font-size:13px;color:#cdd5e2;line-height:1.7"></div>' +
+        '<div style="margin-top:6px"><button class="btn ghost" style="padding:4px 10px;font-size:12px" onclick="cleanOne(\'' + esc(n.id) + '\')">整理</button> ' +
+        '<button class="btn ghost" style="padding:4px 10px;font-size:12px;color:#e04f4f" onclick="delOne(\'' + esc(n.id) + '\')">删除</button></div>';
+      return item;
+    }
+    function toggleBody(el) {
+      var body = el.parentElement.querySelector(".body");
+      if (body.hidden) {
+        body.hidden = false;
+        el.textContent = "▾ " + el.textContent.slice(2);
+        api.get("/api/notes/" + el.parentElement.querySelector(".m").textContent.split(" · ")[1]).then(function (n) { body.textContent = n.body; });
+      } else { body.hidden = true; el.textContent = "▸ " + el.textContent.slice(2); }
+    }
+    async function cleanOne(id) { try { await api.post("/api/notes/" + id + "/clean", {}); toast("已整理：" + id); load(); } catch (e) { toast(e.message, true); } }
+    async function delOne(id) { if (!confirm("删除笔记 " + id + "？")) return; try { await api.del("/api/notes/" + id); toast("已删除"); load(); } catch (e) { toast(e.message, true); } }
+    load();
+  </script>
+</body>
+</html>

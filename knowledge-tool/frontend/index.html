@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>知识库工作流工具 · 管理台</title>
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand"><span class="brand-dot"></span>知识库工作流工具</div>
+    <nav class="nav">
+      <a href="/" class="active">总览</a>
+      <a href="/collect">采集</a>
+      <a href="/clean">整理</a>
+      <a href="/report">报告</a>
+      <a href="/library">笔记库</a>
+      <a href="/graph-page">知识结构</a>
+      <a href="/tasks">任务</a>
+      <a href="/settings">设置</a>
+      <a href="/wizard">初始化向导</a>
+    </nav>
+    <span class="api-status" id="apiStatus">…</span>
+  </header>
+
+  <div class="wrap">
+    <h1>总览</h1>
+    <p class="sub">把「看网页 → 手动整理进笔记 → 生成报告」沉淀成本地 Web 管理台。</p>
+
+    <div class="grid cards" id="statsGrid">
+      <div class="card"><div class="stat"><span class="num" id="nTotal">–</span><span class="lbl">总笔记</span></div></div>
+      <div class="card"><div class="stat"><span class="num" id="nToday">–</span><span class="lbl">今日新增</span></div></div>
+      <div class="card"><div class="stat"><span class="num" id="nTopics">–</span><span class="lbl">主题数</span></div></div>
+      <div class="card"><div class="stat"><span class="num" id="nTags">–</span><span class="lbl">标签数</span></div></div>
+    </div>
+
+    <div style="height:16px"></div>
+    <div class="grid cards">
+      <div class="card">
+        <h3>采集</h3>
+        <p class="desc">粘贴链接或正文，一键入库为结构化笔记。</p>
+        <a class="btn" href="/collect">去采集</a>
+      </div>
+      <div class="card">
+        <h3>整理</h3>
+        <p class="desc">全库去重、打标签、抽关键词，运行期不依赖网络。</p>
+        <a class="btn ghost" href="/clean">去整理</a>
+      </div>
+      <div class="card">
+        <h3>报告</h3>
+        <p class="desc">数据统计 + 内容摘要 + 知识结构三视图。</p>
+        <a class="btn ghost" href="/report">看报告</a>
+      </div>
+      <div class="card">
+        <h3>知识结构</h3>
+        <p class="desc">把笔记库聚合成可交互的知识图谱。</p>
+        <a class="btn ghost" href="/graph-page">打开图谱</a>
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/common.js"></script>
+  <script>
+    (async function () {
+      try {
+        var s = await api.get("/api/stats/overview");
+        document.getElementById("nTotal").textContent = s.daily.summary.total;
+        document.getElementById("nToday").textContent = s.daily.summary.today_new;
+        document.getElementById("nTopics").textContent = s.daily.summary.topics;
+        document.getElementById("nTags").textContent = s.daily.summary.tags;
+        document.getElementById("apiStatus").textContent = "已连接";
+      } catch (e) {
+        document.getElementById("apiStatus").textContent = "后端未连接";
+        document.getElementById("apiStatus").style.color = "#e04f4f";
+      }
+    })();
+  </script>
+</body>
+</html>

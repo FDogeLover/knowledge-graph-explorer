@@ -1,0 +1,103 @@
+"""报告器：聚合统计 + 内容摘要 + 知识结构三视图。
+
+报告数据以 JSON 返回（前端用图表渲染），并可导出 Markdown 存档。
+知识结构视图提供主题/标签/关键词关联数据，供前端知识图谱视图消费。
+"""
+from __future__ import annotations
+
+import json
+from collections import Counter
+from datetime import datetime
+
+from . import store
+from .models import NoteMeta
+
+
+def build_daily() -> dict:
+    """生成今日报告（数据视图）。"""
+    metas = store.list_notes()
+    today = datetime.now().strftime("%Y-%m-%d")
+
+    # 按入库日期统计（近 7 日）
+    day_counter = Counter(m.created_at[:10] for m in metas)
+    last7 = []
+    from datetime import timedelta
+    for i in range(6, -1, -1):
+        d = (datetime.now() - timedelta(days=i)).strftime("%Y-%m-%d")
+        last7.append({"date": d, "count": day_counter.get(d, 0)})
+
+    index = store.load_json(store.config.INDEX_FILE, default={})
+
+    return {
+        "date": today,
+        "summary": {
+            "total": len(metas),
+            "today_new": day_counter.get(today, 0),
+            "topics": len(index.get("topics", {})),
+            "tags": len(index.get("tags", {})),
+        },
+        "trend": last7,
+        "topic_dist": index.get("topics", {}),
+        "tag_dist": index.get("tags", {}),
+        "by_status": index.get("by_status", {}),
+    }
+
+
+def build_content() -> dict:
+    """内容摘要视图：今日新入库 + 摘要 + 关键词云。"""
+    metas = store.list_notes()
+    today = datetime.now().strftime("%Y-%m-%d")
+    today_notes = [m for m in metas if m.created_at[:10] == today]
+
+    keyword_counter = Counter()
+    for m in metas:
+        for k in (m.keywords or []):
+            keyword_counter[k] += 1
+
+    return {
+        "today_notes": [m.to_dict() for m in today_notes[:20]],
+        "keywords": dict(keyword_counter.most_common(30)),
+        "recent": [m.to_dict() for m in metas[:10]],
+    }
+
+
+def build_structure() -> dict:
+    """知识结构视图：主题分布 + 主题内笔记排行 + 标签关联。"""
+    metas = store.list_notes()
+    topic_counter = Counter(m.topic or "默认主题" for m in metas)
+    tag_counter = Counter(t for m in metas for t in (m.tags or []))
+
+    # 主题内笔记排行（横向条形图数据）
+    topic_rank = [{"topic": k, "count": v} for k, v in topic_counter.most_common(12)]
+
+    # 标签关联（热度网格：出现频次）
+    tag_top = [{"tag": k, "count": v} for k, v in tag_counter.most_common(20)]
+
+    return {
+        "topic_rank": topic_rank,
+        "tag_heat": tag_top,
+        "topic_count": len(topic_counter),
+        "tag_count": len(tag_counter),
+    }
+
+
+def export_markdown() -> str:
+    """把今日报告导出为 Markdown（可存档到 reports/）。"""
+    data = build_daily()
+    lines = [
+        f"# 每日知识报告 · {data['date']}",
+        "",
+        f"- 总笔记：{data['summary']['total']}",
+        f"- 今日新增：{data['summary']['today_new']}",
+        f"- 主题数：{data['summary']['topics']}",
+        f"- 标签数：{data['summary']['tags']}",
+        "",
+        "## 主题分布",
+    ]
+    for t, c in data["topic_dist"].items():
+        lines.append(f"- {t}: {c}")
+    text = "\n".join(lines)
+    path = store.config.REPORTS_DIR / f"{data['date']}.md"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(text, encoding="utf-8")
+    return text

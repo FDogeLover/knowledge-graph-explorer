@@ -1,0 +1,14 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# 知识库数据（用户数据，不入库）
+data/
+
+# 工具 / 系统
+.commandcode/
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

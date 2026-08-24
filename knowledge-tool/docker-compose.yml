@@ -1,0 +1,11 @@
+services:
+  knowledge-tool:
+    build: .
+    container_name: knowledge-tool
+    ports:
+      - "8001:8000"
+    volumes:
+      - ./data:/data          # 数据目录挂载到宿主机，便于备份与对接现有知识库
+    restart: unless-stopped
+    environment:
+      - KNOWLEDGE_ROOT=/data

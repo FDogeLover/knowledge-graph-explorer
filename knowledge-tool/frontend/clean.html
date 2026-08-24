@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>整理 · 知识库工作流工具</title>
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand"><span class="brand-dot"></span>知识库工作流工具</div>
+    <nav class="nav">
+      <a href="/">总览</a>
+      <a href="/collect">采集</a>
+      <a href="/clean" class="active">整理</a>
+      <a href="/report">报告</a>
+      <a href="/library">笔记库</a>
+      <a href="/graph-page">知识结构</a>
+      <a href="/tasks">任务</a>
+      <a href="/settings">设置</a>
+      <a href="/wizard">初始化向导</a>
+    </nav>
+  </header>
+
+  <div class="wrap">
+    <h1>整理</h1>
+    <p class="sub">去重、打标签、抽关键词、归类。运行期不调用 AI，纯本地规则，离线可用。</p>
+
+    <div class="panel">
+      <h2>批量整理</h2>
+      <p style="color:var(--c-dim);font-size:13px;margin-bottom:12px">对全库运行整理器：抽取关键词、按规则打标签、生成一句话摘要，并将状态置为 clean。</p>
+      <button class="btn" onclick="cleanAll()">开始全库整理</button>
+      <div class="progress" id="taskProgress" hidden><i></i></div>
+    </div>
+
+    <div class="panel">
+      <h2>整理结果</h2>
+      <table>
+        <thead><tr><th>笔记</th><th>关键词</th><th>标签</th></tr></thead>
+        <tbody id="resultBody"><tr><td colspan="3" style="color:var(--c-dim)">尚未运行</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
+  <script src="/js/common.js"></script>
+  <script>
+    async function cleanAll() {
+      document.getElementById("taskProgress").hidden = false;
+      try {
+        var r = await api.post("/api/notes/clean-all");
+        toast("已提交全库整理");
+        pollTask(r.task_id, renderResults);
+      } catch (e) { toast("提交失败：" + e.message, true); }
+    }
+    function renderResults(res) {
+      if (!res || !res.results) return;
+      toast("整理完成：" + res.cleaned + "/" + res.total);
+      var tbody = document.getElementById("resultBody");
+      tbody.innerHTML = "";
+      api.get("/api/notes").then(function (d) {
+        d.notes.forEach(function (n) {
+          var tr = document.createElement("tr");
+          tr.innerHTML = "<td><b>" + esc(n.title) + "</b><br><span style='color:var(--c-dim);font-size:11px'>" + esc(n.id) + "</span></td>" +
+            "<td>" + (n.keywords || []).map(esc).join("、") + "</td>" +
+            "<td>" + (n.tags || []).map(function (t) { return '<span class="tag">' + esc(t) + "</span>"; }).join("") + "</td>";
+          tbody.appendChild(tr);
+        });
+        if (!d.notes.length) tbody.innerHTML = '<tr><td colspan="3" style="color:var(--c-dim)">库为空</td></tr>';
+      });
+    }
+    function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
+  </script>
+</body>
+</html>

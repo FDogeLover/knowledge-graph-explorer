@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>初始化向导 · 知识库工作流工具</title>
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand"><span class="brand-dot"></span>知识库工作流工具</div>
+    <nav class="nav">
+      <a href="/">总览</a>
+      <a href="/collect">采集</a>
+      <a href="/clean">整理</a>
+      <a href="/report">报告</a>
+      <a href="/library">笔记库</a>
+      <a href="/graph-page">知识结构</a>
+      <a href="/tasks">任务</a>
+      <a href="/settings">设置</a>
+      <a href="/wizard" class="active">初始化向导</a>
+    </nav>
+  </header>
+
+  <div class="wrap" style="max-width:680px">
+    <h1>初始化向导</h1>
+    <p class="sub">空库或首次使用，5 步引导建目录结构与模板。幂等：重复运行只补齐缺失，不覆盖已有笔记。</p>
+
+    <div class="panel">
+      <div id="stepInfo" style="font-size:13px;color:var(--c-dim);margin-bottom:12px"></div>
+      <div id="stepBody"></div>
+      <div style="margin-top:14px;display:flex;justify-content:space-between">
+        <button class="btn ghost" id="prevBtn" onclick="step(-1)">上一步</button>
+        <button class="btn" id="nextBtn" onclick="step(1)">下一步</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/common.js"></script>
+  <script>
+    var cur = 1;
+    var state = { root: "", topics: ["默认主题"] };
+
+    function step(d) {
+      cur = Math.max(1, Math.min(5, cur + d));
+      render();
+    }
+    function render() {
+      var info = document.getElementById("stepInfo");
+      var body = document.getElementById("stepBody");
+      document.getElementById("prevBtn").disabled = cur === 1;
+      document.getElementById("nextBtn").textContent = cur === 5 ? "完成初始化" : "下一步";
+      var steps = ["数据目录", "模板选择", "主题预设", "标签规则", "完成"];
+
+      if (cur === 1) {
+        info.textContent = "第 1/5 步 · 数据目录";
+        body.innerHTML = '<label>数据根目录（留空使用默认 data/）</label><input id="root" type="text" placeholder="如 D:\\knowledge\\my-notes" value="' + state.root + '">';
+      } else if (cur === 2) {
+        info.textContent = "第 2/5 步 · 模板选择";
+        body.innerHTML = '<label>默认使用「文章」笔记模板（meta.schema.json + article.md）</label><div style="color:var(--c-dim);font-size:13px;line-height:1.7">采集后正文存 body.md，元数据存 meta.json；可直接被 Obsidian 打开、可 git 版本管理。</div>';
+      } else if (cur === 3) {
+        info.textContent = "第 3/5 步 · 主题预设";
+        body.innerHTML = '<label>预置主题（逗号分隔，可留空后改）</label><input id="topics" type="text" placeholder="技术,商业,人文,科学,生活" value="' + state.topics.join(",") + '">';
+      } else if (cur === 4) {
+        info.textContent = "第 4/5 步 · 标签规则";
+        body.innerHTML = '<div style="color:var(--c-dim);font-size:13px;line-height:1.7">整理器基于内置关键词规则自动打标签（如含"AI/算法"→ AI）。一期运行期不调 AI，规则可后续在 app/cleaner.py 中维护。</div>';
+      } else {
+        info.textContent = "第 5/5 步 · 完成";
+        body.innerHTML = '<div style="color:var(--c-dim);font-size:13px;line-height:1.7">将创建目录结构（notes / templates / reports）、写入主题表与标签表，并生成模板文件。</div>';
+      }
+    }
+
+    // 完成初始化
+    document.getElementById("nextBtn").onclick = async function () {
+      if (cur < 5) { step(1); return; }
+      if (cur === 1 && document.getElementById("root")) state.root = document.getElementById("root").value.trim();
+      if (document.getElementById("topics")) state.topics = document.getElementById("topics").value.split(/[,，]/).map(function (s) { return s.trim(); }).filter(Boolean);
+      try {
+        var r = await api.post("/api/setup", { root: state.root || null, topics: state.topics, templates: true });
+        toast("初始化完成，数据根目录：" + r.root);
+        document.getElementById("stepBody").innerHTML = '<div style="color:#2f9e7a;font-size:14px">✅ 已就绪：主题 ' + r.topics.length + ' 个，模板 ' + r.templates.length + ' 个</div>';
+      } catch (e) { toast("初始化失败：" + e.message, true); }
+    };
+    render();
+  </script>
+</body>
+</html>

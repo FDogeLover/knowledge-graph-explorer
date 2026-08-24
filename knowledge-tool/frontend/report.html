@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>报告 · 知识库工作流工具</title>
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand"><span class="brand-dot"></span>知识库工作流工具</div>
+    <nav class="nav">
+      <a href="/">总览</a>
+      <a href="/collect">采集</a>
+      <a href="/clean">整理</a>
+      <a href="/report" class="active">报告</a>
+      <a href="/library">笔记库</a>
+      <a href="/graph-page">知识结构</a>
+      <a href="/tasks">任务</a>
+      <a href="/settings">设置</a>
+      <a href="/wizard">初始化向导</a>
+    </nav>
+  </header>
+
+  <div class="wrap">
+    <h1>每日报告</h1>
+    <p class="sub">三视图：数据统计 · 内容摘要 · 知识结构。图表数据全部来自本地，无外部依赖。</p>
+
+    <div style="margin-bottom:16px">
+      <button class="btn" onclick="loadReport()">刷新报告</button>
+      <button class="btn ghost" onclick="exportMd()" style="margin-left:8px">导出 Markdown</button>
+    </div>
+
+    <div class="grid cards" id="statCards"></div>
+    <div style="height:16px"></div>
+
+    <div class="panel"><h2>近 7 日采集趋势</h2><div id="trend" class="trend"></div></div>
+    <div class="panel"><h2>主题分布</h2><div id="topicBars" class="trend"></div></div>
+    <div class="panel"><h2>今日新入库</h2><div id="todayList"></div></div>
+  </div>
+
+  <script src="/js/common.js"></script>
+  <script>
+    async function loadReport() {
+      try {
+        var s = await api.get("/api/stats/overview");
+        renderStats(s.daily.summary);
+        renderTrend(s.daily.trend);
+        renderTopics(s.daily.topic_dist);
+        renderToday(s.content.today_notes);
+      } catch (e) { toast("加载失败：" + e.message, true); }
+    }
+    async function exportMd() {
+      try {
+        var r = await api.post("/api/reports/export");
+        var blob = new Blob([r.markdown], { type: "text/markdown" });
+        var a = document.createElement("a");
+        a.href = URL.createObjectURL(blob); a.download = "daily-report.md"; a.click();
+        toast("已导出 Markdown 到 reports/");
+      } catch (e) { toast("导出失败：" + e.message, true); }
+    }
+    function renderStats(s) {
+      document.getElementById("statCards").innerHTML =
+        stat("总笔记", s.total) + stat("今日新增", s.today_new) + stat("主题数", s.topics) + stat("标签数", s.tags);
+    }
+    function stat(lbl, num) { return '<div class="card"><div class="stat"><span class="num">' + num + '</span><span class="lbl">' + lbl + "</span></div></div>"; }
+    function renderTrend(trend) {
+      var max = Math.max.apply(null, trend.map(function (t) { return t.count; }).concat([1]));
+      document.getElementById("trend").innerHTML =
+        '<div style="display:flex;gap:8px;align-items:flex-end;height:120px">' +
+        trend.map(function (t) { return '<div style="flex:1;display:flex;flex-direction:column;justify-content:flex-end;text-align:center;height:120px"><div style="height:' + (t.count / max * 100) + '%;min-height:3px;background:linear-gradient(180deg,#f59e0b,#e04f4f);border-radius:4px 4px 0 0"></div><div style="font-size:10px;color:var(--c-dim);margin-top:4px">' + t.date.slice(5) + "</div></div>"; }).join("") + "</div>";
+    }
+    function renderTopics(dist) {
+      var total = Object.values(dist).reduce(function (a, b) { return a + b; }, 0) || 1;
+      document.getElementById("topicBars").innerHTML =
+        Object.entries(dist).map(function (kv) {
+          return '<div style="margin-bottom:6px"><div style="display:flex;justify-content:space-between;font-size:12px"><span>' + esc(kv[0]) + '</span><span>' + kv[1] + " 篇</span></div>" +
+            '<div class="progress"><i style="width:' + (kv[1] / total * 100) + '%"></i></div></div>';
+        }).join("");
+    }
+    function renderToday(notes) {
+      var el = document.getElementById("todayList");
+      el.innerHTML = notes.length ? notes.map(function (n) {
+        return '<div class="note-item"><div class="t">' + esc(n.title) + '</div><div class="m">' + esc(n.topic || "默认主题") + " · " + esc(n.summary || "无摘要") + "</div></div>";
+      }).join("") : '<div style="color:var(--c-dim);font-size:13px">今日暂无新入库</div>';
+    }
+    function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
+    loadReport();
+  </script>
+</body>
+</html>

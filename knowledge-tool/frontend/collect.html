@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>采集 · 知识库工作流工具</title>
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand"><span class="brand-dot"></span>知识库工作流工具</div>
+    <nav class="nav">
+      <a href="/">总览</a>
+      <a href="/collect" class="active">采集</a>
+      <a href="/clean">整理</a>
+      <a href="/report">报告</a>
+      <a href="/library">笔记库</a>
+      <a href="/graph-page">知识结构</a>
+      <a href="/tasks">任务</a>
+      <a href="/settings">设置</a>
+      <a href="/wizard">初始化向导</a>
+    </nav>
+    <span class="api-status" id="apiStatus">…</span>
+  </header>
+
+  <div class="wrap">
+    <h1>采集</h1>
+    <p class="sub">方式一抓取链接；方式二粘贴正文。提交后进入后台任务，可在任务中心看进度。</p>
+
+    <div class="panel">
+      <h2>抓取链接</h2>
+      <div class="row">
+        <input id="url" type="text" placeholder="https://example.com/article" />
+        <input id="urlTopic" type="text" placeholder="主题（留空自动归类）" />
+        <input id="urlTags" type="text" placeholder="标签（逗号分隔）" />
+        <button class="btn" onclick="doCollect('url')">采集并入库</button>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>粘贴正文</h2>
+      <label>标题（留空取首行）</label>
+      <input id="txtTitle" type="text" placeholder="文章标题" />
+      <label>正文 / HTML</label>
+      <textarea id="txt" placeholder="粘贴文章正文或 HTML…"></textarea>
+      <div class="row" style="margin-top:10px">
+        <input id="txtTopic" type="text" placeholder="主题" />
+        <input id="txtTags" type="text" placeholder="标签（逗号分隔）" />
+        <button class="btn" onclick="doCollect('text')">粘贴入库</button>
+      </div>
+    </div>
+
+    <div class="progress" id="taskProgress" hidden><i></i></div>
+  </div>
+
+  <script src="/js/common.js"></script>
+  <script>
+    async function doCollect(kind) {
+      var body;
+      if (kind === "url") {
+        var url = document.getElementById("url").value.trim();
+        if (!url) return toast("请输入链接", true);
+        body = { url: url, topic: document.getElementById("urlTopic").value.trim(), tags: splitTags("urlTags") };
+      } else {
+        var text = document.getElementById("txt").value.trim();
+        if (!text) return toast("请粘贴正文", true);
+        body = { text: text, title: document.getElementById("txtTitle").value.trim(), topic: document.getElementById("txtTopic").value.trim(), tags: splitTags("txtTags") };
+      }
+      try {
+        var r = await api.post("/api/collect", body);
+        toast("已提交采集任务");
+        document.getElementById("taskProgress").hidden = false;
+        pollTask(r.task_id, function (res) {
+          var msg = res && res.dedup && res.dedup.hit
+            ? "已存在相同内容，去重命中（更新原笔记）"
+            : "采集完成：" + (res && res.note_id ? res.note_id : "");
+          toast(msg);
+        });
+      } catch (e) { toast("提交失败：" + e.message, true); }
+    }
+    function splitTags(id) {
+      return document.getElementById(id).value.split(/[,，]/).map(function (s) { return s.trim(); }).filter(Boolean);
+    }
+  </script>
+</body>
+</html>

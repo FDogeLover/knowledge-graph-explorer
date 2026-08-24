@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>知识结构 · 知识库工作流工具</title>
+  <link rel="stylesheet" href="/css/style.css" />
+  <style>
+    .graph-stage { position: relative; height: 68vh; border: 1px solid var(--c-border); border-radius: var(--radius); overflow: hidden; background: radial-gradient(800px 500px at 50% 40%, #14203a 0%, var(--c-bg) 60%); }
+    .graph-stage #vp { position: absolute; inset: 0; transform-origin: 0 0; }
+    .gnode { position: absolute; transform: translate(-50%,-50%); display: flex; align-items: center; justify-content: center; text-align: center; border-radius: 50%; border: 2px solid; cursor: pointer; padding: 8px; line-height: 1.25; font-weight: 600; transition: box-shadow .3s; user-select: none; }
+    .gnode .gtext { pointer-events: none; text-shadow: 0 1px 6px rgba(0,0,0,0.85); }
+    .gnode.focus { box-shadow: 0 0 22px 6px var(--gc); z-index: 20; }
+    .gnode.dim { opacity: 0.15; }
+    .gedge { position: absolute; height: 2px; transform-origin: 0 50%; }
+    .gedge i { position: absolute; inset: 0; border-radius: 2px; opacity: .4; }
+    .gedge-label { position: absolute; left: 0; top: 0; transform: translate(-50%,-50%); font-size: 10.5px; white-space: nowrap; padding: 2px 8px; border-radius: 999px; background: rgba(8,12,20,0.88); border: 1px solid rgba(255,255,255,0.22); color: #edf2fa; pointer-events: none; z-index: 6; }
+    .graph-hint { position: absolute; bottom: 12px; left: 50%; transform: translateX(-50%); font-size: 12px; color: var(--c-dim); background: rgba(11,17,27,0.8); padding: 5px 14px; border-radius: 999px; border: 1px solid var(--c-border); white-space: nowrap; }
+    .g-detail { position: absolute; top: 12px; right: 12px; width: 300px; max-height: calc(100% - 60px); overflow: auto; border: 1px solid var(--c-border); border-radius: 12px; background: rgba(11,17,27,0.92); padding: 16px; z-index: 30; }
+    .g-detail .d-title { font-size: 18px; font-weight: 700; margin-bottom: 6px; }
+    .g-detail .d-desc { font-size: 13px; color: #cdd5e2; line-height: 1.7; }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand"><span class="brand-dot"></span>知识库工作流工具</div>
+    <nav class="nav">
+      <a href="/">总览</a>
+      <a href="/collect">采集</a>
+      <a href="/clean">整理</a>
+      <a href="/report">报告</a>
+      <a href="/library">笔记库</a>
+      <a href="/graph-page" class="active">知识结构</a>
+      <a href="/tasks">任务</a>
+      <a href="/settings">设置</a>
+      <a href="/wizard">初始化向导</a>
+    </nav>
+  </header>
+
+  <div class="wrap">
+    <h1>知识结构</h1>
+    <p class="sub">由笔记库实时聚合的知识图谱：节点 = 主题，连线 = 共享标签关系。拖动平移 · 滚轮缩放 · 点击聚焦。</p>
+
+    <div class="graph-stage" id="stage">
+      <div id="vp"></div>
+      <div class="g-detail" id="gdetail" hidden></div>
+      <div class="graph-hint" id="ghint">加载中…</div>
+    </div>
+  </div>
+
+  <script src="/js/common.js"></script>
+  <script>
+    (function () {
+      "use strict";
+      var stage = document.getElementById("stage");
+      var vp = document.getElementById("vp");
+      var g = { nodes: [], byId: {}, zoom: 1, pan: { x: 0, y: 0 } };
+
+      function apply() { vp.style.transform = "translate(" + g.pan.x + "px," + g.pan.y + "px) scale(" + g.zoom + ")"; }
+
+      function layout(data) {
+        var W = stage.clientWidth || 800, H = stage.clientHeight || 500;
+        var cx = W / 2, cy = H / 2, base = Math.min(W, H) * 0.3;
+        var n = data.nodes.length || 1;
+        data.nodes.forEach(function (nd, i) {
+          var ang = (i / n) * Math.PI * 2 - Math.PI / 2;
+          nd.x = cx + base * Math.cos(ang);
+          nd.y = cy + base * Math.sin(ang);
+          nd.color = nd.color || "#3b82f6";
+          g.byId[nd.id] = nd;
+        });
+      }
+
+      function render(data) {
+        g.nodes = data.nodes;
+        layout(data);
+        vp.innerHTML = "";
+
+        // 边
+        data.edges.forEach(function (e) {
+          var a = g.byId[e.from], b = g.byId[e.to];
+          if (!a || !b) return;
+          var dx = b.x - a.x, dy = b.y - a.y;
+          var len = Math.hypot(dx, dy), ang = Math.atan2(dy, dx) * 180 / Math.PI;
+          var el = document.createElement("div");
+          el.className = "gedge";
+          el.style.cssText = "left:" + a.x + "px;top:" + a.y + "px;width:" + len + "px;transform:rotate(" + ang + "deg)";
+          var line = document.createElement("i");
+          line.style.background = "linear-gradient(90deg," + a.color + "," + b.color + ")";
+          el.appendChild(line);
+          var lab = document.createElement("div");
+          lab.className = "gedge-label";
+          lab.style.cssText = "left:" + ((a.x + b.x) / 2) + "px;top:" + ((a.y + b.y) / 2 - 12) + "px";
+          lab.textContent = e.label || "";
+          vp.appendChild(el);
+          vp.appendChild(lab);
+        });
+
+        // 节点
+        data.nodes.forEach(function (nd) {
+          var el = document.createElement("div");
+          el.className = "gnode";
+          el.style.cssText = "left:" + nd.x + "px;top:" + nd.y + "px;width:92px;height:92px;color:" + nd.color + ";border-color:" + nd.color + ";background:radial-gradient(100px 100px at 50% 35%," + nd.color + "2a,rgba(11,17,27,0.8));--gc:" + nd.color;
+          el.innerHTML = '<span class="gtext">' + esc(nd.label) + "</span>";
+          el.onclick = function (ev) { ev.stopPropagation(); focus(nd.id); };
+          vp.appendChild(el);
+        });
+
+        // 初始聚焦第一个
+        if (data.nodes.length) focus(data.nodes[0].id);
+        g.zoom = 1; g.pan = { x: 0, y: 0 };
+        fit(data.nodes);
+        document.getElementById("ghint").textContent = "拖动 平移 · 滚轮 缩放 · 点击 聚焦";
+      }
+
+      function fit(nodes) {
+        var W = stage.clientWidth, H = stage.clientHeight;
+        var xs = nodes.map(function (n) { return n.x; }), ys = nodes.map(function (n) { return n.y; });
+        var minX = Math.min.apply(null, xs), maxX = Math.max.apply(null, xs);
+        var minY = Math.min.apply(null, ys), maxY = Math.max.apply(null, ys);
+        var z = Math.min(W / ((maxX - minX) + 200), H / ((maxY - minY) + 200), 1.6);
+        z = Math.max(0.4, z);
+        g.zoom = z;
+        g.pan.x = W / 2 - (minX + maxX) / 2 * z;
+        g.pan.y = H / 2 - (minY + maxY) / 2 * z;
+        apply();
+      }
+
+      function focus(id) {
+        var nd = g.byId[id];
+        if (!nd) return;
+        Array.prototype.forEach.call(vp.querySelectorAll(".gnode"), function (el) {
+          el.classList.remove("focus", "dim");
+        });
+        var el = vp.querySelectorAll(".gnode")[g.nodes.indexOf(nd)];
+        if (el) el.classList.add("focus");
+        var detail = document.getElementById("gdetail");
+        detail.hidden = false;
+        detail.innerHTML = '<div class="d-title">' + esc(nd.label) + '</div><div class="d-desc">' + esc(nd.desc || "") + "</div>" +
+          (nd.qa && nd.qa.length ? '<div style="margin-top:10px;border-top:1px solid var(--c-border);padding-top:8px;font-size:12.5px;color:#cdd5e2">' +
+            nd.qa.map(function (q) { return '<b style="display:block;margin:4px 0">' + esc(q.q) + "</b>" + esc(q.a); }).join("") + "</div>" : "");
+      }
+
+      // 平移 / 缩放
+      stage.addEventListener("mousedown", function (e) {
+        if (e.target.closest(".gnode")) return;
+        var sx = e.clientX, sy = e.clientY, from = { x: g.pan.x, y: g.pan.y };
+        function mv(ev) { g.pan.x = from.x + (ev.clientX - sx); g.pan.y = from.y + (ev.clientY - sy); apply(); }
+        function up() { window.removeEventListener("mousemove", mv); window.removeEventListener("mouseup", up); }
+        window.addEventListener("mousemove", mv);
+        window.addEventListener("mouseup", up);
+      });
+      stage.addEventListener("wheel", function (e) {
+        e.preventDefault();
+        var rect = stage.getBoundingClientRect();
+        var cx = e.clientX - rect.left, cy = e.clientY - rect.top;
+        var nz = Math.min(3, Math.max(0.4, g.zoom * (e.deltaY < 0 ? 1.12 : 0.9)));
+        var k = nz / g.zoom;
+        g.pan.x = cx - (cx - g.pan.x) * k;
+        g.pan.y = cy - (cy - g.pan.y) * k;
+        g.zoom = nz; apply();
+      }, { passive: false });
+
+      function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
+
+      api.get("/api/graph/data").then(render).catch(function (e) {
+        document.getElementById("ghint").textContent = "加载失败：" + e.message;
+      });
+    })();
+  </script>
+</body>
+</html>
