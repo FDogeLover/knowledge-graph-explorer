@@ -1,0 +1,44 @@
+{
+  "id": "智谱GLM-5-2宣布下周完全开源-MIT协议-1M上下文-定位最强代码Agen",
+  "title": "智谱GLM-5.2宣布下周完全开源：MIT协议，1M上下文，定位最强代码Agent模型",
+  "source_url": "https://www.aihub.cn/news/zhipu-glm-5-2/",
+  "created_at": "2026-06-14",
+  "updated_at": "2026-06-14",
+  "topic": "示例·AI科技",
+  "tags": [
+    "智谱AI",
+    "开源模型",
+    "AI编程"
+  ],
+  "keywords": [],
+  "summary": "2026年6月13日，智谱CEO唐杰宣布GLM-5.2全量开放，下周MIT协议完全开源。100万Token上下文窗口，定位国内最强代码和Agent模型，内测反馈体感接近Opus 4.5。在Fable 5被禁后一天宣布开源，抢占市场窗口期。",
+  "status": "clean",
+  "fingerprint": "213fdb937b8280329afeec9ffff228cb96e06b70",
+  "type": "source",
+  "source_type": "官方公告",
+  "date_published": "2026-06-13",
+  "related_entities": [
+    {
+      "name": "GLM-5.2",
+      "desc": "宣布开源的模型",
+      "type": "entity"
+    },
+    {
+      "name": "唐杰",
+      "desc": "智谱CEO宣布",
+      "type": "entity"
+    },
+    {
+      "name": "智谱AI",
+      "desc": "开发方",
+      "type": "entity"
+    }
+  ],
+  "related_concepts": [
+    {
+      "name": "AI开源模型窗口期策略",
+      "desc": "Fable 5被禁后的填补真空",
+      "type": "concept"
+    }
+  ]
+}
