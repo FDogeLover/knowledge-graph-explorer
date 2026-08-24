@@ -28,9 +28,16 @@
 
     <div class="panel">
       <h2>批量整理</h2>
-      <p style="color:var(--c-dim);font-size:13px;margin-bottom:12px">对全库运行整理器：抽取关键词、按规则打标签、生成一句话摘要，并将状态置为 clean。</p>
+      <p style="color:var(--c-dim);font-size:13px;margin-bottom:12px">对全库运行整理器：抽取关键词、按规则打标签、生成一句话摘要，并将状态置为 clean。<b>纯本地规则，离线可用。</b></p>
       <button class="btn" onclick="cleanAll()">开始全库整理</button>
       <div class="progress" id="taskProgress" hidden><i></i></div>
+    </div>
+
+    <div class="panel">
+      <h2>AI 增强整理 <span class="tag">需 LLM</span></h2>
+      <p style="color:var(--c-dim);font-size:13px;margin-bottom:12px">对全库用 LLM 再提炼一遍：优化标题/摘要、补充标签，并识别实体/概念写入双链、建骨架页——弥补规则整理对「任意正文实体识别」的短板（尤其链接/粘贴来源）。未配置 LLM Key 时此按钮不可用，规则整理不受影响。</p>
+      <button class="btn ghost" id="enhanceBtn" onclick="enhanceAll()">AI 增强整理全库</button>
+      <div class="progress" id="enhanceProgress" hidden><i></i></div>
     </div>
 
     <div class="panel">
@@ -67,6 +74,24 @@
         });
         if (!d.notes.length) tbody.innerHTML = '<tr><td colspan="3" style="color:var(--c-dim)">库为空</td></tr>';
       });
+    }
+    async function enhanceAll() {
+      var btn = document.getElementById("enhanceBtn");
+      try {
+        btn.disabled = true;
+        var r = await api.post("/api/notes/enhance-all");
+        document.getElementById("enhanceProgress").hidden = false;
+        toast("已提交 AI 增强整理全库");
+        pollTask(r.task_id, function (res) {
+          if (res && res.error) return toast("AI 增强失败：" + res.error, true);
+          var sk = res && res.skeletons_created ? res.skeletons_created : {};
+          toast("AI 增强完成：" + (res ? res.cleaned : "?") + "/" + (res ? res.total : "?") +
+            (sk.entity ? "（新建实体+" + sk.entity + " 概念+" + sk.concept + "）" : ""));
+        });
+      } catch (e) {
+        toast("提交失败：" + e.message, true);
+        btn.disabled = false;
+      }
     }
     function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
   </script>

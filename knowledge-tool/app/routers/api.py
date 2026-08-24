@@ -178,6 +178,29 @@ def clean_all():
     return {"task_id": task_id, "status": "running"}
 
 
+# ---------- AI 增强整理（混合模式：规则兜底 + 可选 LLM 增强） ----------
+@router.post("/notes/{note_id}/enhance")
+def enhance_one(note_id: str):
+    """单篇 AI 增强整理：LLM 提炼标题/摘要/标签/实体/概念并建双链。"""
+    from .. import ai_cleaner
+    if not llm.is_configured():
+        raise HTTPException(400, "未配置 LLM API Key（设置页填写 或 环境变量 LLM_API_KEY），AI 增强不可用；规则整理不受影响")
+    try:
+        return {"ok": True, **ai_cleaner.enhance_clean(note_id)}
+    except FileNotFoundError as e:
+        raise HTTPException(404, str(e)) from e
+
+
+@router.post("/notes/enhance-all")
+def enhance_all():
+    """批量 AI 增强整理全库（走任务中心，逐篇失败不中断）。"""
+    from .. import ai_cleaner
+    if not llm.is_configured():
+        raise HTTPException(400, "未配置 LLM API Key（设置页填写 或 环境变量 LLM_API_KEY），AI 增强不可用")
+    task_id = manager.submit("AI增强整理", ai_cleaner.enhance_all)
+    return {"task_id": task_id, "status": "running"}
+
+
 @router.delete("/notes/{note_id}")
 def delete_one(note_id: str):
     ok = store.delete_note(note_id)

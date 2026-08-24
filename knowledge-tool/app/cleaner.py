@@ -79,7 +79,7 @@ def _find_existing_skeleton(name: str, kind: str) -> str | None:
     target = (name or "").strip()
     if not target:
         return None
-    from .models import slugify
+    from .models import NoteMeta, slugify
     nid = slugify(target)
     if store.load_meta(nid):
         return nid

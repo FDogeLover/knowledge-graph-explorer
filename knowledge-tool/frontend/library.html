@@ -71,6 +71,7 @@
         '<div>' + (n.tags || []).map(function (t) { return '<span class="tag">' + esc(t) + "</span>"; }).join("") + "</div>" +
         '<div class="body" hidden style="margin-top:8px;white-space:pre-wrap;font-size:13px;color:#cdd5e2;line-height:1.7"></div>' +
         '<div style="margin-top:6px"><button class="btn ghost" style="padding:4px 10px;font-size:12px" onclick="cleanOne(\'' + esc(n.id) + '\')">整理</button> ' +
+        '<button class="btn ghost" style="padding:4px 10px;font-size:12px;color:#7fb2ff" title="LLM 提炼实体/概念/标签/摘要" onclick="enhanceOne(\'' + esc(n.id) + '\')">AI增强</button> ' +
         '<button class="btn ghost" style="padding:4px 10px;font-size:12px;color:#e04f4f" onclick="delOne(\'' + esc(n.id) + '\')">删除</button></div>';
       return item;
     }
@@ -83,6 +84,16 @@
       } else { body.hidden = true; el.textContent = "▸ " + el.textContent.slice(2); }
     }
     async function cleanOne(id) { try { await api.post("/api/notes/" + id + "/clean", {}); toast("已整理：" + id); load(); } catch (e) { toast(e.message, true); } }
+    async function enhanceOne(id) {
+      try {
+        toast("正在 AI 增强整理：" + id + " …");
+        var r = await api.post("/api/notes/" + encodeURIComponent(id) + "/enhance", {});
+        if (r.skipped) return toast("跳过：" + id + "（" + r.reason + "）");
+        var sk = r.skeletons || {};
+        toast("AI 增强完成：" + id + (sk.entity ? "（实体+" + sk.entity + " 概念+" + sk.concept + "）" : ""));
+        load();
+      } catch (e) { toast(e.message, true); }
+    }
     async function delOne(id) { if (!confirm("删除笔记 " + id + "？")) return; try { await api.del("/api/notes/" + id); toast("已删除"); load(); } catch (e) { toast(e.message, true); } }
     load();
   </script>
