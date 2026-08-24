@@ -68,6 +68,28 @@ def clean_note(note_id: str, topic: str = "") -> dict:
             "summary": summary, "links": links}
 
 
+def ensure_links(note_id: str) -> dict:
+    """对单篇 source：解析其双链表，为不存在的实体/概念建骨架页。
+    返回 {"entity": 新建数, "concept": 新建数}。
+    """
+    note = store.load_note(note_id)
+    if not note:
+        return {"entity": 0, "concept": 0}
+    if note.meta.type != "source":
+        return {"entity": 0, "concept": 0}
+    links = link_entities_concepts(note)
+    created = {"entity": 0, "concept": 0}
+    for item in links["entities"]:
+        up = upsert_entity_concept(item["name"], item["desc"], "entity", note_id, note.meta.topic)
+        if up["action"] == "created":
+            created["entity"] += 1
+    for item in links["concepts"]:
+        up = upsert_entity_concept(item["name"], item["desc"], "concept", note_id, note.meta.topic)
+        if up["action"] == "created":
+            created["concept"] += 1
+    return created
+
+
 def clean_all() -> dict:
     metas = store.list_notes()
     results = []
@@ -76,16 +98,9 @@ def clean_all() -> dict:
         try:
             r = clean_note(m.id, m.topic)
             if r.get("links"):
-                for item in r["links"]["entities"]:
-                    up = upsert_entity_concept(item["name"], item["desc"], "entity",
-                                               m.id, m.topic)
-                    if up["action"] == "created":
-                        created["entity"] += 1
-                for item in r["links"]["concepts"]:
-                    up = upsert_entity_concept(item["name"], item["desc"], "concept",
-                                               m.id, m.topic)
-                    if up["action"] == "created":
-                        created["concept"] += 1
+                c = ensure_links(m.id)
+                created["entity"] += c["entity"]
+                created["concept"] += c["concept"]
             results.append({"id": m.id, "ok": True})
         except Exception as e:  # noqa: BLE001
             results.append({"id": m.id, "ok": False, "error": str(e)})

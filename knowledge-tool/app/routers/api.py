@@ -4,7 +4,7 @@ from __future__ import annotations
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
-from .. import cleaner, collector, indexer, reporter, store
+from .. import cleaner, collector, indexer, llm, reporter, store
 from ..runner import manager
 
 router = APIRouter(prefix="/api")
@@ -70,6 +70,47 @@ def collect(body: dict):
     else:
         raise HTTPException(400, "需要 url 或 text")
     return {"task_id": task_id, "status": "running"}
+
+
+class DirectionBody(BaseModel):
+    direction: str
+
+
+@router.post("/collect/direction")
+def collect_direction(body: DirectionBody):
+    """AI 采集：操作者只给方向，由 LLM 组织内容并按规范入库（含双链/骨架页）。"""
+    from .. import ai_collector
+    if not llm.is_configured():
+        raise HTTPException(400, "未配置 LLM API Key（设置页填写 或 环境变量 LLM_API_KEY）")
+    direction = body.direction.strip()
+    if not direction:
+        raise HTTPException(400, "请填写采集方向")
+    task_id = manager.submit("AI方向采集", ai_collector.collect_by_direction, direction)
+    return {"task_id": task_id, "status": "running"}
+
+
+class LLMBody(BaseModel):
+    api_key: str = ""
+    base_url: str = ""
+    model: str = ""
+    provider: str = "auto"
+
+
+@router.get("/settings/llm")
+def llm_status():
+    cfg = llm.get_llm_config()
+    return {"configured": llm.is_configured(),
+            "base_url": cfg["base_url"],
+            "model": cfg["model"],
+            "provider": cfg["provider"],
+            "api_key_set": bool(cfg["api_key"])}
+
+
+@router.post("/settings/llm")
+def llm_save(body: LLMBody):
+    cfg = llm.save_llm_config({"api_key": body.api_key, "base_url": body.base_url,
+                               "model": body.model, "provider": body.provider})
+    return {"ok": True, "configured": bool(cfg["api_key"]), "model": cfg["model"], "provider": cfg["provider"]}
 
 
 # ---------- notes ----------

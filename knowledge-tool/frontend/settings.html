@@ -42,6 +42,28 @@
     </div>
 
     <div class="panel">
+      <h2>LLM API（AI 方向采集）</h2>
+      <p style="color:var(--c-dim);font-size:13px;line-height:1.7;margin-bottom:10px">用于「AI 方向采集」：只需给方向，AI 自动按知识库规范整理入库。支持三协议：OpenAI Chat / OpenAI Responses / Anthropic，可自动识别。</p>
+      <label>协议</label>
+      <select id="llmProvider">
+        <option value="auto">自动识别（按 Base URL）</option>
+        <option value="openai">OpenAI Chat Completions</option>
+        <option value="responses">OpenAI Responses API</option>
+        <option value="anthropic">Anthropic Messages API</option>
+      </select>
+      <label>API Key</label>
+      <input id="llmKey" type="password" placeholder="sk-... 或 anthropic key" autocomplete="off" />
+      <label>Base URL（留空用 OpenAI 默认）</label>
+      <input id="llmBase" type="text" placeholder="https://api.openai.com/v1 | https://api.anthropic.com" />
+      <label>模型</label>
+      <input id="llmModel" type="text" placeholder="gpt-4o-mini / claude-3-5-sonnet…" />
+      <div class="row" style="margin-top:12px">
+        <button class="btn" onclick="saveLlm()">保存 LLM 配置</button>
+        <span style="color:var(--c-dim);font-size:12px;align-self:center" id="llmStatus"></span>
+      </div>
+    </div>
+
+    <div class="panel">
       <h2>关于正式版</h2>
       <p style="color:var(--c-dim);font-size:13px;line-height:1.7">
         正式完整版 =「知识库工作流工具」（Python + FastAPI + 原生前端 + 文件数据层，Linux/Docker 部署）。
@@ -50,7 +72,7 @@
     </div>
   </div>
 
-  <script src="/js/common.js"></script>
+  <script src="/js/common.js?v=2"></script>
   <script>
     function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
     async function load() {
@@ -61,7 +83,26 @@
         document.getElementById("topicsBox").innerHTML = (tp.topics || []).map(function (t) { return '<span class="tag">' + esc(t) + "</span>"; }).join("") || "暂无主题";
         var tg = await api.get("/api/tags");
         document.getElementById("tagsBox").innerHTML = (tg.tags || []).map(function (t) { return '<span class="tag">' + esc(t) + "</span>"; }).join("") || "暂无标签";
+        // LLM 配置
+        var ll = await api.get("/api/settings/llm");
+        document.getElementById("llmBase").value = ll.base_url || "";
+        document.getElementById("llmModel").value = ll.model || "";
+        document.getElementById("llmProvider").value = ll.provider || "auto";
+        document.getElementById("llmStatus").textContent = ll.configured ? "✅ 已配置（" + ll.model + "）" : "⚠ 未配置 API Key";
       } catch (e) { toast("加载失败：" + e.message, true); }
+    }
+    async function saveLlm() {
+      try {
+        var r = await api.post("/api/settings/llm", {
+          api_key: document.getElementById("llmKey").value.trim(),
+          base_url: document.getElementById("llmBase").value.trim(),
+          model: document.getElementById("llmModel").value.trim(),
+          provider: document.getElementById("llmProvider").value,
+        });
+        toast(r.configured ? "LLM 配置已保存 ✅" : "已保存（未填 Key，AI 采集不可用）");
+        document.getElementById("llmStatus").textContent = r.configured ? "✅ 已配置（" + r.model + "）" : "⚠ 未配置 API Key";
+        document.getElementById("llmKey").value = "";
+      } catch (e) { toast("保存失败：" + e.message, true); }
     }
     load();
   </script>

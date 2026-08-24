@@ -10,10 +10,18 @@
   });
 
   // API 助手
+  // 从错误响应里提取后端 detail（如 400 的引导文案），兜底给 HTTP 状态
+  async function errorOf(r) {
+    try {
+      var j = await r.json();
+      return j && j.detail ? j.detail : "HTTP " + r.status;
+    } catch (e) { return "HTTP " + r.status; }
+  }
+
   window.api = {
     async get(path) {
       var r = await fetch(path);
-      if (!r.ok) throw new Error("HTTP " + r.status);
+      if (!r.ok) throw new Error(await errorOf(r));
       return r.json();
     },
     async post(path, body) {
@@ -22,12 +30,12 @@
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body || {}),
       });
-      if (!r.ok) throw new Error("HTTP " + r.status);
+      if (!r.ok) throw new Error(await errorOf(r));
       return r.json();
     },
     async del(path) {
       var r = await fetch(path, { method: "DELETE" });
-      if (!r.ok) throw new Error("HTTP " + r.status);
+      if (!r.ok) throw new Error(await errorOf(r));
       return r.json();
     },
   };

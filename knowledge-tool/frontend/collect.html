@@ -25,7 +25,17 @@
 
   <div class="wrap">
     <h1>采集</h1>
-    <p class="sub">方式一抓取链接；方式二粘贴正文。提交后进入后台任务，可在任务中心看进度。</p>
+    <p class="sub">方式一：AI 按方向采集（只需给主题）；方式二：抓取链接；方式三：粘贴正文。所有采集自动按规范入库（双链/骨架页）。</p>
+
+    <div class="panel">
+      <h2>AI 方向采集</h2>
+      <div style="color:var(--c-dim);font-size:13px;line-height:1.7;margin-bottom:10px">输入一个采集方向（主题/话题/问题），AI 自动组织内容并按知识库规范整理入库（含实体/概念双链）。无需手动维护格式。</div>
+      <div class="row">
+        <input id="direction" type="text" placeholder="如：AI 芯片人才流动；苹果发布新 AI 助手；2026 新能源车市场…" />
+        <button class="btn" onclick="doDirection()">AI 采集并入库</button>
+      </div>
+      <div class="progress" id="dirProgress" hidden><i></i></div>
+    </div>
 
     <div class="panel">
       <h2>抓取链接</h2>
@@ -53,7 +63,7 @@
     <div class="progress" id="taskProgress" hidden><i></i></div>
   </div>
 
-  <script src="/js/common.js"></script>
+  <script src="/js/common.js?v=2"></script>
   <script>
     async function doCollect(kind) {
       var body;
@@ -77,6 +87,25 @@
           toast(msg);
         });
       } catch (e) { toast("提交失败：" + e.message, true); }
+    }
+    async function doDirection() {
+      var direction = document.getElementById("direction").value.trim();
+      if (!direction) return toast("请输入采集方向", true);
+      try {
+        var r = await api.post("/api/collect/direction", { direction: direction });
+        toast("已提交 AI 方向采集");
+        document.getElementById("dirProgress").hidden = false;
+        pollTask(r.task_id, function (res) {
+          if (res && res.error) return toast("AI 采集失败：" + res.error, true);
+          var cleaned = res && res.cleaned ? res.cleaned : {};
+          var n = res && res.note_id ? res.note_id : "";
+          var sk = cleaned && cleaned.skeletons ? cleaned.skeletons : null;
+          toast("AI 采集完成：" + n + (sk ? "（新建实体+" + sk.entity + " 概念+" + sk.concept + "）" : ""));
+        });
+      } catch (e) {
+        // 400：LLM 未配置等——给出明确引导
+        toast("提交失败：" + e.message, true);
+      }
     }
     function splitTags(id) {
       return document.getElementById(id).value.split(/[,，]/).map(function (s) { return s.trim(); }).filter(Boolean);
