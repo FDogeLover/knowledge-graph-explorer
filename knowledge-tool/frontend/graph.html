@@ -299,8 +299,9 @@
             el.appendChild(b);
           }
           el.onclick = function (ev) { ev.stopPropagation(); focus(nd.id); };
-          // 悬停节点：仅显示其相邻边的关系名（弹窗化，不常驻）
+          // 连线文字：仅当存在选中节点时，悬停节点才显示其相邻边的关系名
           el.onmouseenter = function () {
+            if (!g.selected) return;
             stage.classList.add("edge-label-show");
             g.hoverNode = nd.id;
             syncEdgeLabels();
