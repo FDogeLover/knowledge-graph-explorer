@@ -274,6 +274,8 @@ def graph_data():
             "date_published": m.date_published or m.created_at,
             "url": m.source_url or "",
             "links": links,
+            # 正文（Markdown，供详情面板富文本渲染）
+            "body": (note_body(m.id) or "")[:3000],
             "qa": [{"q": f"这是什么{node_type}？",
                     "a": (m.summary or f"{node_type}「{m.title or m.id}」") +
                          (f"，收录于主题「{m.topic or '未归类'}」。" if m.topic else "。")}],
@@ -317,3 +319,9 @@ def slug_a(name: str) -> str:
     """"兄弟 slug：与 cleaner/extract 创建的骨架页 id 一致"""
     from ..models import slugify
     return slugify(name)
+
+
+def note_body(note_id: str) -> str | None:
+    """读取笔记正文（markdown），供图谱详情面板富文本渲染。"""
+    note = store.load_note(note_id)
+    return note.body if note else None

@@ -7,7 +7,7 @@
   <link rel="stylesheet" href="/css/style.css" />
   <style>
     .graph-stage { position: relative; height: 68vh; border: 1px solid var(--c-border); border-radius: var(--radius); overflow: hidden; background: radial-gradient(800px 500px at 50% 40%, #14203a 0%, var(--c-bg) 60%); isolation: isolate; }
-    .graph-stage #vp { position: absolute; inset: 0; transform-origin: 0 0; }
+    .graph-stage #vp { position: absolute; inset: 0; transform-origin: 0 0; z-index: 1; }
 
     /* ===== 节点：按类型不同形状 ===== */
     .gnode {
@@ -18,10 +18,14 @@
       transition: box-shadow .25s ease, opacity .25s ease, filter .25s ease, border-width .2s;
     }
     .gnode .gtext {
-      pointer-events: none; font-weight: 600; overflow: hidden;
-      display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2;  /* 两行截断 */
-      word-break: break-all; text-overflow: ellipsis;
+      pointer-events: none; font-weight: 600;
+      overflow: hidden;
+      display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2;
+      text-overflow: ellipsis;
+      /* 关键：禁止中文单字竖排/极端截断 */
+      word-break: keep-all; overflow-wrap: anywhere;
       text-shadow: 0 1px 4px rgba(0,0,0,0.8);
+      min-width: 0;
     }
     /* 实体：圆形 */
     .gnode.type-entity { border-radius: 50%; }
@@ -107,11 +111,17 @@
     .legend-modal .lm-dot { width: 14px; height: 14px; border-radius: 50%; flex-shrink: 0; }
     .legend-modal .lm-dot.card { border-radius: 5px; }
 
-    /* ===== 右侧详情面板（增强） ===== */
-    .g-detail { position: absolute; top: 50px; right: 12px; width: 312px; max-height: calc(100% - 66px); overflow: auto; border: 1px solid var(--c-border); border-radius: 12px; background: rgba(11,17,27,0.94); padding: 16px; z-index: 30; box-shadow: 0 8px 30px rgba(0,0,0,.4); }
+    /* 连线穿透：画布层 z-index 1 < 节点20 < 面板50；面板不穿透 */
+    .g-detail { position: absolute; top: 50px; right: 12px; width: 320px; max-height: calc(100% - 66px); overflow: auto; border: 1px solid var(--c-border); border-radius: 12px; background: rgba(11,17,27,0.96); padding: 16px; z-index: 60; box-shadow: 0 8px 30px rgba(0,0,0,.5); }
     .g-detail .d-type { display: inline-block; padding: 2px 9px; border-radius: 999px; font-size: 10.5px; letter-spacing: 1px; border: 1px solid; margin-bottom: 10px; }
     .g-detail .d-title { font-size: 19px; font-weight: 700; margin: 2px 0 10px; line-height: 1.35; }
     .g-detail .d-desc { font-size: 13.5px; color: #d3dbe8; line-height: 1.7; }
+    .g-detail .md-body p { margin: 6px 0; line-height: 1.75; }
+    .g-detail .md-body h4, .g-detail .md-body h5 { margin: 10px 0 6px; color: var(--c-text); }
+    .g-detail .md-body ul { margin: 4px 0 8px; padding-left: 18px; }
+    .g-detail .md-body li { line-height: 1.7; margin: 3px 0; }
+    .g-detail .md-body code { background: rgba(255,255,255,.08); border-radius: 4px; padding: 1px 5px; font-size: 12px; }
+    .g-detail .md-body .md-wiki { color: var(--c-accent); background: rgba(224,79,79,.1); border-radius: 4px; padding: 1px 5px; }
     .g-detail h4 { font-size: 11px; color: var(--c-dim); letter-spacing: 1.8px; margin: 16px 0 8px; border-top: 1px solid var(--c-glass-border); padding-top: 14px; }
     .g-detail .tag {/* 相关标签去重合并后：#标签/#关键词同用 */
       display: inline-block; padding: 3px 9px; border-radius: 999px; font-size: 11.5px;
@@ -119,7 +129,7 @@
     .g-detail .tag.kw { background: rgba(245,158,11,.13); color: #f3cf9b; }  /* 关键词同组但反馈不同色 */
     .g-detail .meta-row { font-size: 11.5px; color: var(--c-dim); margin: 2px 0; }
     .g-detail .d-link { display: block; margin-top: 8px; font-size: 12px; color: #7fb2ff; word-break: break-all; }
-    .g-detail .rel-chip { display: block; padding: 6px 4px; margin: 3px 0; border-radius: 7px; font-size: 12.5px; color: var(--c-text); cursor: pointer; transition: background .15s; border-left: 2px solid transparent; }
+    .g-detail .rel-chip { display: block; padding: 7px 10px; margin: 4px 0; border-radius: 8px; font-size: 12.5px; color: var(--c-text); cursor: pointer; transition: background .15s; border-left: 2px solid transparent; line-height: 1.5; word-break: break-all; }
     .g-detail .rel-chip:hover { background: rgba(255,255,255,.06); border-left-color: var(--gc); }
 
     @media (max-width: 700px) {
@@ -301,9 +311,13 @@
           vp.appendChild(el);
         });
 
-        if (data.nodes.length) focus(data.nodes[0].id);
         g.zoom = 1; g.pan = { x: 0, y: 0 };
         fit();
+        if (data.nodes.length) {
+          g.suppressPan = true;
+          focus(data.nodes[0].id);
+          g.suppressPan = false;
+        }
       }
 
       function fit() {
@@ -350,6 +364,26 @@
           if (anode) el.classList.add("active"); else if (bnode) {} else el.classList.add("faded");
         });
         showDetail(nd);
+        if (!g.suppressPan) panIntoView(nd);
+      }
+
+      /* 面板避让：面板在右侧，聚焦时把节点平移到左 2/3 视区内，避免被卡片盖住 */
+      function panIntoView(nd) {
+        if (stage.clientWidth <= 700) return;   // 移动端：详情在底部，不需要横向避让
+        var sx = g.pan.x + nd.x * g.zoom;      // 节点当前屏幕 x
+        var W = stage.clientWidth;
+        var panelW = 340;
+        var rightBound = W - panelW - 24;      // 右 2/3 上限
+        if (sx > rightBound || sx < 40) {
+          // 平移到面板左缘外侧
+          g.pan.x = rightBound - nd.x * g.zoom - 110;
+          // 也保证纵向可见
+          var sy = g.pan.y + nd.y * g.zoom;
+          var H = stage.clientHeight;
+          if (sy < 40) g.pan.y = 40 - nd.y * g.zoom;
+          if (sy > H - 60) g.pan.y = (H - 60) - nd.y * g.zoom;
+          apply();
+        }
       }
 
       /* 悬停节点时：仅显示其相邻边的关系名（弹窗化） */
@@ -373,7 +407,10 @@
         var kw = (nd.keywords || []).slice(0, 10);
         var html = '<span class="d-type" style="color:' + nd.color + '">' + typeLabel + "</span>";
         html += '<div class="d-title">' + esc(nd.label) + "</div>";
-        html += '<div class="d-desc">' + esc(nd.desc || "") + "</div>";
+        // 正文优先（富文本 Markdown 渲染）；无正文则用摘要
+        var bodyMd = (nd.body || "").trim();
+        var descHtml = bodyMd ? renderMd(bodyMd) : "<p>" + esc(nd.desc || "") + "</p>";
+        html += '<div class="d-desc md-body">' + descHtml + "</div>";
         html += '<h4>元信息</h4><div class="meta-row">发布时间：' + esc(nd.date_published || "—") + "</div>";
         // 相关标签：标签 ∪ 关键词，去重合并为一个模块（避免重复展示）
         var tags = (nd.tags || []).slice(0, 12);
@@ -424,6 +461,44 @@
       }, { passive: false });
 
       function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
+
+      // 轻量 Markdown 渲染（无外部库，CSP 安全）：标题/粗斜/列表/链接/代码/[[双链]]
+      function inlineMd(s) {
+        var h = esc(s);
+        h = h.replace(/\*\*([^*]+)\*\*/g, "<b>$1</b>");
+        h = h.replace(/\*([^*]+)\*/g, "<i>$1</i>");
+        h = h.replace(/`([^`]+)`/g, "<code>$1</code>");
+        h = h.replace(/\[\[([^\]]+)\]\]/g, '<span class="md-wiki">$1</span>');
+        h = h.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a class="d-link" href="$2" target="_blank" rel="noopener">$1</a>');
+        return h;
+      }
+      function renderMd(md) {
+        var lines = (md || "").split("\n");
+        var out = [], list = [];
+        function flush() {
+          if (list.length) { out.push('<ul>' + list.join("") + "</ul>"); list = []; }
+        }
+        lines.forEach(function (line) {
+          var t = line.trim();
+          if (!t) { flush(); return; }
+          var m;
+          if ((m = t.match(/^(#{1,4})\s+(.*)/))) {
+            flush();
+            var lv = m[1].length;
+            out.push((lv <= 2 ? "<h4>" : "<h5>") + inlineMd(m[2]) + (lv <= 2 ? "</h4>" : "</h5>"));
+          } else if ((m = t.match(/^[-*]\s+(.*)/)) || (m = t.match(/^\d+[.)]\s+(.*)/))) {
+            list.push("<li>" + inlineMd(m[1]) + "</li>");
+          } else if (t.match(/^\|.*\|$/)) {
+            flush(); // 表格：降级为纯文本段落
+            out.push("<p>" + inlineMd(t.replace(/^\||\|$/g, "").replace(/\|/g, " · ")) + "</p>");
+          } else {
+            flush();
+            out.push("<p>" + inlineMd(t) + "</p>");
+          }
+        });
+        flush();
+        return out.join("");
+      }
 
       // 图例按钮：切换弹窗
       var legendBtn = document.getElementById("legendBtn");
