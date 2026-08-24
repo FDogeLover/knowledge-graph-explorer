@@ -22,8 +22,9 @@ _tmp/
 __pycache__/
 *.pyc
 
-# 小工具上传素材（图标等，不入库）
+# 小工具上传素材（图标、笔记截图等，不入库）
 /图标.png
+/screenshots/
 *.zip
 .venv/
 *.local
