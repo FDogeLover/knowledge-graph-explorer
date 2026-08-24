@@ -34,12 +34,27 @@
     .gnode.type-source .gtext { font-size: 11px; font-weight: 500; }
 
     /* 选中：平滑边框高亮（替代刺眼发光） */
-    .gnode.focus { box-shadow: 0 0 0 3px var(--gc), 0 4px 18px rgba(0,0,0,.45); z-index: 20; }
+    .gnode.focus { box-shadow: 0 0 0 3px var(--gc), 0 4px 18px rgba(0,0,0,.45); z-index: 20; border-width: 2.5px; }
     .gnode:hover { z-index: 15; filter: brightness(1.18); }
-    .gnode.dim { opacity: .14; filter: grayscale(.6); }
-    .gnode.ghost { opacity: .35; }   /* 收起态弱显示 */
+    /* 非选中：提高到 28%~30%，保留微弱边框高光 → 静态时有空间架构感，不做"暗纹盲盒" */
+    .gnode.dim { opacity: .28; filter: grayscale(.35); box-shadow: 0 0 0 1px var(--gc); border-width: 1.5px; }
+    .gnode.ghost { opacity: .4; }   /* 收起态弱显示 */
 
-    /* 度数角标 */
+    /* 实体：圆形 + 标签下沉（Label Node：文字放圆下方，不挤在圆内） */
+    .gnode.type-entity { border-radius: 50%; }
+    .gnode.type-entity .gtext {
+      font-size: 13.5px; max-width: 150px;
+      position: absolute; top: calc(100% + 8px); left: 50%; transform: translateX(-50%);
+      white-space: normal; -webkit-line-clamp: 2; line-height: 1.25;
+      background: rgba(11,17,27,.72); padding: 2px 6px; border-radius: 6px;
+      backdrop-filter: blur(4px); border: 1px solid rgba(255,255,255,.1);
+    }
+    /* 概念：圆角矩形（Tag 感），文字居中自动换行 */
+    .gnode.type-concept { border-radius: 14px; }
+    .gnode.type-concept .gtext { font-size: 12.5px; }
+    /* 来源：卡片式，文字自动换行、两侧留白防溢出 */
+    .gnode.type-source { border-radius: 10px; }
+    .gnode.type-source .gtext { font-size: 11px; font-weight: 500; line-height: 1.35; }
     .gnode .gdeg {
       position: absolute; top: -6px; right: -6px; min-width: 18px; height: 18px; padding: 0 4px;
       border-radius: 999px; background: #0b111b; border: 1px solid var(--gc);
@@ -49,38 +64,59 @@
 
     /* ===== 边 ===== */
     .gedge { position: absolute; height: 2px; transform-origin: 0 50%; pointer-events: none; }
-    .gedge i { position: absolute; inset: 0; opacity: .42; }
+    .gedge i { position: absolute; inset: 0; opacity: .5; }
     .gedge i.ent { border-top: 2px solid; }                 /* 实体关联：实线 */
-    .gedge i.con { border-top: 2px dashed; }                /* 概念关联：虚线 */
-    .gedge.active i { opacity: .9; }
-    .gedge.faded { opacity: .08; }
-    /* 线上文字：默认隐藏，聚焦/悬停才显示 → 减图面冗余 */
+    .gedge i.con { border-top: 2.5px dashed; opacity: .8; } /* 概念关联：高对比虚线 */
+    .gedge.active i { opacity: 1; }
+    .gedge.faded { opacity: .1; }
+    /* 关系名：仅悬停邻接节点时以弹窗显示（不再常驻线上） */
     .gedge-label {
-      position: absolute; left: 0; top: 0; transform: translate(-50%,-50%);
-      font-size: 10px; white-space: nowrap; padding: 2px 6px; border-radius: 999px;
-      background: rgba(8,12,20,.9); border: 1px solid rgba(255,255,255,.18); color: #e6edf7;
-      pointer-events: none; z-index: 6; opacity: 0; transition: opacity .2s;
+      position: absolute; left: 0; top: 0; transform: translate(-50%,-140%);
+      font-size: 10px; white-space: nowrap; padding: 2px 7px; border-radius: 999px;
+      background: rgba(8,12,20,.92); border: 1px solid rgba(255,255,255,.16); color: #e6edf7;
+      pointer-events: none; z-index: 6; opacity: 0; transition: opacity .15s;
+      box-shadow: 0 2px 8px rgba(0,0,0,.4);
     }
-    .show-labels .gedge-label { opacity: 1; }
+    .edge-label-show .gedge-label { opacity: 1; }
     .gnode.loading { opacity: 0; }
 
-    /* 提示浮条：右下角半透明 */
+    /* 提示浮条：右下角小胶囊、毛玻璃 */
     .graph-hint {
-      position: absolute; right: 12px; bottom: 10px; z-index: 5;
-      display: flex; align-items: center; gap: 6px;
-      font-size: 11px; color: rgba(233,240,250,.75);
-      background: rgba(11,17,27,.6); padding: 5px 12px; border-radius: 999px;
-      border: 1px solid rgba(255,255,255,.12); backdrop-filter: blur(6px);
-      pointer-events: none; white-space: nowrap;
+      position: absolute; right: 14px; bottom: 12px; z-index: 5;
+      display: flex; align-items: center; gap: 5px;
+      font-size: 10.5px; color: rgba(233,240,250,.72);
+      background: rgba(11,17,27,.5); padding: 4px 10px; border-radius: 999px;
+      border: 1px solid rgba(255,255,255,.1); backdrop-filter: blur(8px);
+      pointer-events: none; white-space: nowrap; letter-spacing: .3px;
     }
+    /* 图例说明：右上角 ℹ️ 小按钮 + 点击弹窗 */
+    .graph-legend-btn {
+      position: absolute; top: 12px; right: 12px; z-index: 40; cursor: pointer;
+      width: 30px; height: 30px; border-radius: 50%; border: 1px solid var(--c-border);
+      background: rgba(11,17,27,.7); color: var(--c-dim); font-size: 15px; line-height: 1;
+      display: flex; align-items: center; justify-content: center; transition: all .18s;
+    }
+    .graph-legend-btn:hover { color: #fff; border-color: rgba(255,255,255,.3); }
+    .legend-modal {
+      position: absolute; top: 50px; right: 12px; width: 260px; z-index: 40;
+      border: 1px solid var(--c-border); border-radius: 12px; background: rgba(11,17,27,.95);
+      padding: 14px; box-shadow: 0 8px 30px rgba(0,0,0,.5);
+    }
+    .legend-modal h4 { font-size: 12px; letter-spacing: 1px; margin-bottom: 8px; color: var(--c-text); }
+    .legend-modal .lm-item { display: flex; align-items: center; gap: 8px; margin: 6px 0; font-size: 12px; color: var(--c-dim); }
+    .legend-modal .lm-dot { width: 14px; height: 14px; border-radius: 50%; flex-shrink: 0; }
+    .legend-modal .lm-dot.card { border-radius: 5px; }
 
     /* ===== 右侧详情面板（增强） ===== */
-    .g-detail { position: absolute; top: 12px; right: 12px; width: 312px; max-height: calc(100% - 60px); overflow: auto; border: 1px solid var(--c-border); border-radius: 12px; background: rgba(11,17,27,0.94); padding: 16px; z-index: 30; box-shadow: 0 8px 30px rgba(0,0,0,.4); }
-    .g-detail .d-type { display: inline-block; padding: 2px 9px; border-radius: 999px; font-size: 10.5px; letter-spacing: 1px; border: 1px solid; margin-bottom: 8px; }
-    .g-detail .d-title { font-size: 17px; font-weight: 700; margin: 2px 0 8px; line-height: 1.4; }
-    .g-detail .d-desc { font-size: 13px; color: #cdd5e2; line-height: 1.7; }
-    .g-detail h4 { font-size: 11.5px; color: var(--c-dim); letter-spacing: 1.5px; margin: 14px 0 6px; border-top: 1px solid var(--c-glass-border); padding-top: 12px; }
-    .g-detail .tag { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 11px; background: rgba(76,139,245,.14); color: #bcd3f7; margin: 3px 4px 0 0; }
+    .g-detail { position: absolute; top: 50px; right: 12px; width: 312px; max-height: calc(100% - 66px); overflow: auto; border: 1px solid var(--c-border); border-radius: 12px; background: rgba(11,17,27,0.94); padding: 16px; z-index: 30; box-shadow: 0 8px 30px rgba(0,0,0,.4); }
+    .g-detail .d-type { display: inline-block; padding: 2px 9px; border-radius: 999px; font-size: 10.5px; letter-spacing: 1px; border: 1px solid; margin-bottom: 10px; }
+    .g-detail .d-title { font-size: 19px; font-weight: 700; margin: 2px 0 10px; line-height: 1.35; }
+    .g-detail .d-desc { font-size: 13.5px; color: #d3dbe8; line-height: 1.7; }
+    .g-detail h4 { font-size: 11px; color: var(--c-dim); letter-spacing: 1.8px; margin: 16px 0 8px; border-top: 1px solid var(--c-glass-border); padding-top: 14px; }
+    .g-detail .tag {/* 相关标签去重合并后：#标签/#关键词同用 */
+      display: inline-block; padding: 3px 9px; border-radius: 999px; font-size: 11.5px;
+      background: rgba(76,139,245,.15); color: #c4d8f8; margin: 3px 5px 0 0; }
+    .g-detail .tag.kw { background: rgba(245,158,11,.13); color: #f3cf9b; }  /* 关键词同组但反馈不同色 */
     .g-detail .meta-row { font-size: 11.5px; color: var(--c-dim); margin: 2px 0; }
     .g-detail .d-link { display: block; margin-top: 8px; font-size: 12px; color: #7fb2ff; word-break: break-all; }
     .g-detail .rel-chip { display: block; padding: 6px 4px; margin: 3px 0; border-radius: 7px; font-size: 12.5px; color: var(--c-text); cursor: pointer; transition: background .15s; border-left: 2px solid transparent; }
@@ -113,10 +149,20 @@
 
   <div class="wrap">
     <h1>知识结构</h1>
-    <p class="sub">由笔记库双链实时聚合：实体(橙·圆) · 概念(紫·圆角) · 来源(蓝·卡片)。拖动平移 · 滚轮缩放 · 点击聚焦。</p>
+    <p class="sub" style="display:none">（图例见右上角 ℹ️）</p>
 
     <div class="graph-stage" id="stage">
       <div id="vp"></div>
+      <button class="graph-legend-btn" id="legendBtn" title="图例说明">ℹ️</button>
+      <div class="legend-modal" id="legendModal" hidden>
+        <h4>图例说明</h4>
+        <div class="lm-item"><span class="lm-dot" style="background:#4c8bf5"></span>来源（蓝色 · 卡片）— 文章/链接/文本</div>
+        <div class="lm-item"><span class="lm-dot" style="background:#f59e0b"></span>实体（橙色 · 圆形）— 公司/组织/人物</div>
+        <div class="lm-item"><span class="lm-dot" style="background:#a855f7;border-radius:5px"></span>概念（紫色 · 圆角）— 抽象词/趋势</div>
+        <h4 style="margin-top:12px">连线</h4>
+        <div class="lm-item"><span class="lm-dot" style="background:#4c8bf5;height:3px;border-radius:0"></span>&nbsp;实线 = 实体关联 · 虚线 = 概念关联</div>
+        <div class="lm-item"><span class="lm-dot" style="background:transparent"></span>数字角标 = 该节点连接数</div>
+      </div>
       <div class="g-detail" id="gdetail" hidden></div>
       <div class="graph-hint" id="ghint">拖动平移 · 滚轮缩放 · 点击查看</div>
     </div>
@@ -241,9 +287,17 @@
             el.appendChild(b);
           }
           el.onclick = function (ev) { ev.stopPropagation(); focus(nd.id); };
-          el.onmouseenter = function () { stage.classList.add("show-labels"); };
-          el.onmouseleave = function () { if (!g.selected) stage.classList.remove("show-labels"); else ensureLabels(g.selected); };
-          stage.addEventListener("mouseleave", function () { if (!g.selected) stage.classList.remove("show-labels"); });
+          // 悬停节点：仅显示其相邻边的关系名（弹窗化，不常驻）
+          el.onmouseenter = function () {
+            stage.classList.add("edge-label-show");
+            g.hoverNode = nd.id;
+            syncEdgeLabels();
+          };
+          el.onmouseleave = function () {
+            stage.classList.remove("edge-label-show");
+            g.hoverNode = null;
+            syncEdgeLabels();
+          };
           vp.appendChild(el);
         });
 
@@ -286,25 +340,26 @@
           var c = cls(nk);
           c.forEach(function (x) { el.classList.add(x); });
         });
-        // 边高亮/淡化
+        // 边高亮/淡化（不再常驻文字，聚焦时不自动弹文字）
         vp.querySelectorAll(".gedge").forEach(function (el) { el.classList.remove("active", "faded"); });
-        vp.querySelectorAll(".gedge-label").forEach(function (l) { l.style.opacity = "0"; });
+        var labels = vp.querySelectorAll(".gedge-label");
         g.edges.forEach(function (e, i) {
           var anode = e.from === id || e.to === id, bnode = ones.has(e.from) || ones.has(e.to);
           var edgeEls = vp.querySelectorAll(".gedge");
           var el = edgeEls[i]; if (!el) return;
           if (anode) el.classList.add("active"); else if (bnode) {} else el.classList.add("faded");
         });
-        // 显示选中节点相邻边文字
-        ensureLabels();
         showDetail(nd);
       }
 
-      function ensureLabels() {
-        vp.querySelectorAll(".gedge-label").forEach(function (l) { l.style.opacity = "0"; });
+      /* 悬停节点时：仅显示其相邻边的关系名（弹窗化） */
+      function syncEdgeLabels() {
+        var labels = vp.querySelectorAll(".gedge-label");
+        labels.forEach(function (l) { l.style.opacity = "0"; });
+        if (!g.hoverNode) return;
         g.edges.forEach(function (e, i) {
-          if (e.from === g.selected || e.to === g.selected) {
-            var l = vp.querySelectorAll(".gedge-label")[i];
+          if (e.from === g.hoverNode || e.to === g.hoverNode) {
+            var l = labels[i];
             if (l) l.style.opacity = "1";
           }
         });
@@ -316,13 +371,22 @@
         d.hidden = false;
         var typeLabel = ({ source: "来源", entity: "实体", concept: "概念" })[nd.type] || "节点";
         var kw = (nd.keywords || []).slice(0, 10);
-        var tags = (nd.tags || []).slice(0, 12);
         var html = '<span class="d-type" style="color:' + nd.color + '">' + typeLabel + "</span>";
         html += '<div class="d-title">' + esc(nd.label) + "</div>";
         html += '<div class="d-desc">' + esc(nd.desc || "") + "</div>";
         html += '<h4>元信息</h4><div class="meta-row">发布时间：' + esc(nd.date_published || "—") + "</div>";
-        if (tags.length) html += '<h4>标签</h4><div>' + tags.map(function (t) { return '<span class="tag">' + esc(t) + "</span>"; }).join("") + "</div>";
-        if (kw.length) html += '<h4>关键词</h4><div>' + kw.map(function (k) { return '<span class="tag">' + esc(k) + "</span>"; }).join("") + "</div>";
+        // 相关标签：标签 ∪ 关键词，去重合并为一个模块（避免重复展示）
+        var tags = (nd.tags || []).slice(0, 12);
+        var kw = (nd.keywords || []).slice(0, 10);
+        var merged = [];
+        tags.forEach(function (t) { if (merged.indexOf(t) < 0) merged.push(t); });
+        var kwExtra = kw.filter(function (k) { return merged.indexOf(k) < 0; });
+        if (merged.length || kwExtra.length) {
+          html += "<h4>相关标签</h4><div>" +
+            merged.map(function (t) { return '<span class="tag">' + esc(t) + "</span>"; }).join("") +
+            kwExtra.slice(0, 6).map(function (k) { return '<span class="tag kw">' + esc(k) + "</span>"; }).join("") +
+            "</div>";
+        }
         if (nd.links && (nd.links.entities.length || nd.links.concepts.length)) {
           html += '<h4>关联</h4>';
           (nd.links.entities || []).forEach(function (nm) { html += '<div class="rel-chip" data-goto="' + esc(nm) + '">▸ ' + esc(nm) + "</div>"; });
@@ -360,6 +424,19 @@
       }, { passive: false });
 
       function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
+
+      // 图例按钮：切换弹窗
+      var legendBtn = document.getElementById("legendBtn");
+      var legendModal = document.getElementById("legendModal");
+      legendBtn.addEventListener("click", function (e) {
+        e.stopPropagation();
+        legendModal.hidden = !legendModal.hidden;
+      });
+      document.addEventListener("click", function (e) {
+        if (!legendModal.hidden && !legendModal.contains(e.target) && e.target !== legendBtn) {
+          legendModal.hidden = true;
+        }
+      });
 
       api.get("/api/graph/data").then(render).catch(function (e) {
         document.getElementById("ghint").textContent = "加载失败：" + e.message;
