@@ -6,19 +6,93 @@
   <title>知识结构 · 知识库工作流工具</title>
   <link rel="stylesheet" href="/css/style.css" />
   <style>
-    .graph-stage { position: relative; height: 68vh; border: 1px solid var(--c-border); border-radius: var(--radius); overflow: hidden; background: radial-gradient(800px 500px at 50% 40%, #14203a 0%, var(--c-bg) 60%); }
+    .graph-stage { position: relative; height: 68vh; border: 1px solid var(--c-border); border-radius: var(--radius); overflow: hidden; background: radial-gradient(800px 500px at 50% 40%, #14203a 0%, var(--c-bg) 60%); isolation: isolate; }
     .graph-stage #vp { position: absolute; inset: 0; transform-origin: 0 0; }
-    .gnode { position: absolute; transform: translate(-50%,-50%); display: flex; align-items: center; justify-content: center; text-align: center; border-radius: 50%; border: 2px solid; cursor: pointer; padding: 8px; line-height: 1.25; font-weight: 600; transition: box-shadow .3s; user-select: none; }
-    .gnode .gtext { pointer-events: none; text-shadow: 0 1px 6px rgba(0,0,0,0.85); }
-    .gnode.focus { box-shadow: 0 0 22px 6px var(--gc); z-index: 20; }
-    .gnode.dim { opacity: 0.15; }
-    .gedge { position: absolute; height: 2px; transform-origin: 0 50%; }
-    .gedge i { position: absolute; inset: 0; border-radius: 2px; opacity: .4; }
-    .gedge-label { position: absolute; left: 0; top: 0; transform: translate(-50%,-50%); font-size: 10.5px; white-space: nowrap; padding: 2px 8px; border-radius: 999px; background: rgba(8,12,20,0.88); border: 1px solid rgba(255,255,255,0.22); color: #edf2fa; pointer-events: none; z-index: 6; }
-    .graph-hint { position: absolute; bottom: 12px; left: 50%; transform: translateX(-50%); font-size: 12px; color: var(--c-dim); background: rgba(11,17,27,0.8); padding: 5px 14px; border-radius: 999px; border: 1px solid var(--c-border); white-space: nowrap; }
-    .g-detail { position: absolute; top: 12px; right: 12px; width: 300px; max-height: calc(100% - 60px); overflow: auto; border: 1px solid var(--c-border); border-radius: 12px; background: rgba(11,17,27,0.92); padding: 16px; z-index: 30; }
-    .g-detail .d-title { font-size: 18px; font-weight: 700; margin-bottom: 6px; }
+
+    /* ===== 节点：按类型不同形状 ===== */
+    .gnode {
+      position: absolute; transform: translate(-50%,-50%);
+      display: flex; align-items: center; justify-content: center; text-align: center;
+      cursor: pointer; user-select: none; padding: 8px; box-sizing: border-box;
+      border: 2px solid; line-height: 1.3;
+      transition: box-shadow .25s ease, opacity .25s ease, filter .25s ease, border-width .2s;
+    }
+    .gnode .gtext {
+      pointer-events: none; font-weight: 600; overflow: hidden;
+      display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2;  /* 两行截断 */
+      word-break: break-all; text-overflow: ellipsis;
+      text-shadow: 0 1px 4px rgba(0,0,0,0.8);
+    }
+    /* 实体：圆形 */
+    .gnode.type-entity { border-radius: 50%; }
+    .gnode.type-entity .gtext { font-size: 14px; }
+    /* 概念：圆角矩形（Tag 感） */
+    .gnode.type-concept { border-radius: 14px; }
+    .gnode.type-concept .gtext { font-size: 12.5px; }
+    /* 来源：卡片式（横向圆角） */
+    .gnode.type-source { border-radius: 10px; }
+    .gnode.type-source .gtext { font-size: 11px; font-weight: 500; }
+
+    /* 选中：平滑边框高亮（替代刺眼发光） */
+    .gnode.focus { box-shadow: 0 0 0 3px var(--gc), 0 4px 18px rgba(0,0,0,.45); z-index: 20; }
+    .gnode:hover { z-index: 15; filter: brightness(1.18); }
+    .gnode.dim { opacity: .14; filter: grayscale(.6); }
+    .gnode.ghost { opacity: .35; }   /* 收起态弱显示 */
+
+    /* 度数角标 */
+    .gnode .gdeg {
+      position: absolute; top: -6px; right: -6px; min-width: 18px; height: 18px; padding: 0 4px;
+      border-radius: 999px; background: #0b111b; border: 1px solid var(--gc);
+      color: #fff; font-size: 10px; font-weight: 700; line-height: 16px; text-align: center;
+      opacity: .9; pointer-events: none;
+    }
+
+    /* ===== 边 ===== */
+    .gedge { position: absolute; height: 2px; transform-origin: 0 50%; pointer-events: none; }
+    .gedge i { position: absolute; inset: 0; opacity: .42; }
+    .gedge i.ent { border-top: 2px solid; }                 /* 实体关联：实线 */
+    .gedge i.con { border-top: 2px dashed; }                /* 概念关联：虚线 */
+    .gedge.active i { opacity: .9; }
+    .gedge.faded { opacity: .08; }
+    /* 线上文字：默认隐藏，聚焦/悬停才显示 → 减图面冗余 */
+    .gedge-label {
+      position: absolute; left: 0; top: 0; transform: translate(-50%,-50%);
+      font-size: 10px; white-space: nowrap; padding: 2px 6px; border-radius: 999px;
+      background: rgba(8,12,20,.9); border: 1px solid rgba(255,255,255,.18); color: #e6edf7;
+      pointer-events: none; z-index: 6; opacity: 0; transition: opacity .2s;
+    }
+    .show-labels .gedge-label { opacity: 1; }
+    .gnode.loading { opacity: 0; }
+
+    /* 提示浮条：右下角半透明 */
+    .graph-hint {
+      position: absolute; right: 12px; bottom: 10px; z-index: 5;
+      display: flex; align-items: center; gap: 6px;
+      font-size: 11px; color: rgba(233,240,250,.75);
+      background: rgba(11,17,27,.6); padding: 5px 12px; border-radius: 999px;
+      border: 1px solid rgba(255,255,255,.12); backdrop-filter: blur(6px);
+      pointer-events: none; white-space: nowrap;
+    }
+
+    /* ===== 右侧详情面板（增强） ===== */
+    .g-detail { position: absolute; top: 12px; right: 12px; width: 312px; max-height: calc(100% - 60px); overflow: auto; border: 1px solid var(--c-border); border-radius: 12px; background: rgba(11,17,27,0.94); padding: 16px; z-index: 30; box-shadow: 0 8px 30px rgba(0,0,0,.4); }
+    .g-detail .d-type { display: inline-block; padding: 2px 9px; border-radius: 999px; font-size: 10.5px; letter-spacing: 1px; border: 1px solid; margin-bottom: 8px; }
+    .g-detail .d-title { font-size: 17px; font-weight: 700; margin: 2px 0 8px; line-height: 1.4; }
     .g-detail .d-desc { font-size: 13px; color: #cdd5e2; line-height: 1.7; }
+    .g-detail h4 { font-size: 11.5px; color: var(--c-dim); letter-spacing: 1.5px; margin: 14px 0 6px; border-top: 1px solid var(--c-glass-border); padding-top: 12px; }
+    .g-detail .tag { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 11px; background: rgba(76,139,245,.14); color: #bcd3f7; margin: 3px 4px 0 0; }
+    .g-detail .meta-row { font-size: 11.5px; color: var(--c-dim); margin: 2px 0; }
+    .g-detail .d-link { display: block; margin-top: 8px; font-size: 12px; color: #7fb2ff; word-break: break-all; }
+    .g-detail .rel-chip { display: block; padding: 6px 4px; margin: 3px 0; border-radius: 7px; font-size: 12.5px; color: var(--c-text); cursor: pointer; transition: background .15s; border-left: 2px solid transparent; }
+    .g-detail .rel-chip:hover { background: rgba(255,255,255,.06); border-left-color: var(--gc); }
+
+    @media (max-width: 700px) {
+      .g-detail { left: 8px; right: 8px; top: auto; bottom: max(8px, env(safe-area-inset-bottom, 8px)); width: auto; max-height: 55vh; border-radius: 16px; }
+      .graph-hint { right: 10px; bottom: max(10px, env(safe-area-inset-bottom, 10px)); }
+      .gnode.type-entity .gtext { font-size: 13px; }
+      .gnode.type-concept .gtext { font-size: 11.5px; }
+      .gnode.type-source .gtext { font-size: 10.5px; }
+    }
   </style>
 </head>
 <body>
@@ -39,12 +113,12 @@
 
   <div class="wrap">
     <h1>知识结构</h1>
-    <p class="sub">由笔记库双链实时聚合：来源(蓝) → 实体(橙)/概念(紫) 关系网。拖动平移 · 滚轮缩放 · 点击聚焦。</p>
+    <p class="sub">由笔记库双链实时聚合：实体(橙·圆) · 概念(紫·圆角) · 来源(蓝·卡片)。拖动平移 · 滚轮缩放 · 点击聚焦。</p>
 
     <div class="graph-stage" id="stage">
       <div id="vp"></div>
       <div class="g-detail" id="gdetail" hidden></div>
-      <div class="graph-hint" id="ghint">加载中…</div>
+      <div class="graph-hint" id="ghint">拖动平移 · 滚轮缩放 · 点击查看</div>
     </div>
   </div>
 
@@ -54,29 +128,82 @@
       "use strict";
       var stage = document.getElementById("stage");
       var vp = document.getElementById("vp");
-      var g = { nodes: [], byId: {}, zoom: 1, pan: { x: 0, y: 0 } };
+      var g = { nodes: [], byId: {}, edges: [], zoom: 1, pan: { x: 0, y: 0 }, selected: null };
 
       function apply() { vp.style.transform = "translate(" + g.pan.x + "px," + g.pan.y + "px) scale(" + g.zoom + ")"; }
 
-      function layout(data) {
+      /* 样式常量：按类型 */
+      var STYLE = {
+        entity:  { shape: "circle", min: 54,  max: 92,  font: 14 },
+        concept: { shape: "card",   min: 46,  max: 74,  font: 12.5 },
+        source:  { shape: "card",   min: 40,  max: 66,  font: 11 }
+      };
+
+      /* ===== 布局：按度数权重分内/外环 + 碰撞避让 ===== */
+      function layout() {
         var W = stage.clientWidth || 800, H = stage.clientHeight || 500;
-        var cx = W / 2, cy = H / 2, base = Math.min(W, H) * 0.3;
-        var n = data.nodes.length || 1;
-        data.nodes.forEach(function (nd, i) {
-          var ang = (i / n) * Math.PI * 2 - Math.PI / 2;
-          nd.x = cx + base * Math.cos(ang);
-          nd.y = cy + base * Math.sin(ang);
-          nd.color = nd.color || "#3b82f6";
-          g.byId[nd.id] = nd;
+        var cx = W / 2, cy = H / 2;
+
+        // 度数（连接数）
+        var deg = {};
+        g.edges.forEach(function (e) { deg[e.from] = (deg[e.from]||0)+1; deg[e.to] = (deg[e.to]||0)+1; });
+
+        // hub（度数高者）放内环，其余外环分散
+        var sorted = g.nodes.slice().sort(function (a, b) { return (deg[b.id]||0) - (deg[a.id]||0); });
+        var mid = Math.min(sorted.length, Math.max(1, Math.ceil(sorted.length * 0.4)));
+        var inner = sorted.slice(0, mid), outer = sorted.slice(mid);
+
+        var R_in = Math.min(W, H) * 0.22, R_out = Math.min(W, H) * 0.40;
+        var angs = {};
+        function ring(list, R, start) {
+          var n = list.length || 1;
+          list.forEach(function (nd, i) {
+            var ang = start + (i / n) * Math.PI * 2 - Math.PI / 2;
+            angs[nd.id] = ang;
+            nd._R = R; nd._budget = (2 * Math.PI * R) / n;   // 每节点弧长 = 碰撞预算
+          });
+        }
+        ring(inner, R_in, 0);
+        ring(outer, R_out, (inner.length % 2 ? 0.5 : 0) * Math.PI);
+
+        // 规避同环相邻重叠：按弧长预算控制间距，过挤则整体外扩
+        var radiusMul = 1;
+        g.nodes.forEach(function (nd) {
+          var prev = nd._budget || 0;
+          var need = (nd._size || 40) * 2.2;
+          if (prev < need) radiusMul = Math.max(radiusMul, need / Math.max(prev, 1));
+        });
+        g.nodes.forEach(function (nd) {
+          nd.x = cx + nd._R * radiusMul * Math.cos(angs[nd.id]);
+          nd.y = cy + nd._R * radiusMul * Math.sin(angs[nd.id]);
         });
       }
 
+      /* ===== 节点尺寸：类型基准 + 度数权重 ===== */
+      function sizeFor(nd, deg) {
+        var s = STYLE[nd.type] || STYLE.source;
+        var d = Math.min(deg || 0, 6);
+        // 实体/核心放大，来源（文章）偏小
+        var size = s.min + d * 6;
+        return Math.min(size, s.max);
+      }
+
       function render(data) {
-        g.nodes = data.nodes;
-        layout(data);
+        g.nodes = data.nodes; g.byId = {}; g.edges = data.edges; g.adj = {};
+        g.nodes.forEach(function (nd) { g.byId[nd.id] = nd; });
+        var deg = {};
+        g.edges.forEach(function (e) { deg[e.from]=(deg[e.from]||0)+1; deg[e.to]=(deg[e.to]||0)+1; });
+        g.nodes.forEach(function (nd) { nd._deg = deg[nd.id]||0; nd._size = sizeFor(nd, nd._deg); });
+
+        // 邻接表（供聚焦/淡化）
+        g.adj = {};
+        g.nodes.forEach(function (n) { g.adj[n.id] = new Set(); });
+        g.edges.forEach(function (e) { g.adj[e.from].add(e.to); g.adj[e.to].add(e.from); });
+
+        layout();
         vp.innerHTML = "";
 
-        // 边
+        // ---- 边 ----
         data.edges.forEach(function (e) {
           var a = g.byId[e.from], b = g.byId[e.to];
           if (!a || !b) return;
@@ -84,66 +211,137 @@
           var len = Math.hypot(dx, dy), ang = Math.atan2(dy, dx) * 180 / Math.PI;
           var el = document.createElement("div");
           el.className = "gedge";
-          el.style.cssText = "left:" + a.x + "px;top:" + a.y + "px;width:" + len + "px;transform:rotate(" + ang + "deg)";
+          el.dataset.edge = "1";
+          el.style.cssText = "left:" + a.x + "px;top:" + a.y + "px;width:" + len + "px;height:2px;transform:rotate(" + ang + "deg)";
           var line = document.createElement("i");
-          line.style.background = "linear-gradient(90deg," + a.color + "," + b.color + ")";
+          var isEntity = (e.label || "").indexOf("实体") >= 0;
+          line.className = isEntity ? "ent" : "con";
+          line.style.cssText = "border-color:" + a.color + ";filter:drop-shadow(0 0 2px " + a.color + "88);";
           el.appendChild(line);
           var lab = document.createElement("div");
           lab.className = "gedge-label";
-          lab.style.cssText = "left:" + ((a.x + b.x) / 2) + "px;top:" + ((a.y + b.y) / 2 - 12) + "px";
+          lab.style.cssText = "left:" + ((a.x + b.x) / 2) + "px;top:" + ((a.y + b.y) / 2) + "px;";
           lab.textContent = e.label || "";
           vp.appendChild(el);
           vp.appendChild(lab);
         });
 
-        // 节点
-        data.nodes.forEach(function (nd) {
+        // ---- 节点 ----
+        g.nodes.forEach(function (nd) {
           var el = document.createElement("div");
-          el.className = "gnode";
-          el.style.cssText = "left:" + nd.x + "px;top:" + nd.y + "px;width:92px;height:92px;color:" + nd.color + ";border-color:" + nd.color + ";background:radial-gradient(100px 100px at 50% 35%," + nd.color + "2a,rgba(11,17,27,0.8));--gc:" + nd.color;
-          el.innerHTML = '<span class="gtext">' + esc(nd.label) + "</span>";
+          var sz = nd._size;
+          el.className = "gnode type-" + (nd.type || "source");
+          el.style.cssText = "left:" + nd.x + "px;top:" + nd.y + "px;width:" + sz + "px;height:" + sz + "px;color:" + nd.color + ";border-color:" + nd.color + ";background:radial-gradient(120px 120px at 50% 32%," + nd.color + "2b,rgba(11,17,27,0.85));--gc:" + nd.color;
+          el.title = nd.label;   // Tooltip 完整标题
+          el.innerHTML = '<span class="gtext">' + esc(nd.label) + '</span>';
+          // 度数角标
+          if (nd._deg > 1) {
+            var b = document.createElement("span");
+            b.className = "gdeg"; b.textContent = nd._deg; b.style.setProperty("--gc", nd.color);
+            el.appendChild(b);
+          }
           el.onclick = function (ev) { ev.stopPropagation(); focus(nd.id); };
+          el.onmouseenter = function () { stage.classList.add("show-labels"); };
+          el.onmouseleave = function () { if (!g.selected) stage.classList.remove("show-labels"); else ensureLabels(g.selected); };
+          stage.addEventListener("mouseleave", function () { if (!g.selected) stage.classList.remove("show-labels"); });
           vp.appendChild(el);
         });
 
-        // 初始聚焦第一个
         if (data.nodes.length) focus(data.nodes[0].id);
         g.zoom = 1; g.pan = { x: 0, y: 0 };
-        fit(data.nodes);
-        document.getElementById("ghint").textContent = "拖动 平移 · 滚轮 缩放 · 点击 聚焦";
+        fit();
       }
 
-      function fit(nodes) {
+      function fit() {
         var W = stage.clientWidth, H = stage.clientHeight;
-        var xs = nodes.map(function (n) { return n.x; }), ys = nodes.map(function (n) { return n.y; });
+        var xs = g.nodes.map(function (n) { return n.x; }), ys = g.nodes.map(function (n) { return n.y; });
         var minX = Math.min.apply(null, xs), maxX = Math.max.apply(null, xs);
         var minY = Math.min.apply(null, ys), maxY = Math.max.apply(null, ys);
-        var z = Math.min(W / ((maxX - minX) + 200), H / ((maxY - minY) + 200), 1.6);
-        z = Math.max(0.4, z);
+        var z = Math.min(W / ((maxX - minX) + 220), H / ((maxY - minY) + 220), 1.5);
+        z = Math.max(0.35, z);
         g.zoom = z;
         g.pan.x = W / 2 - (minX + maxX) / 2 * z;
         g.pan.y = H / 2 - (minY + maxY) / 2 * z;
         apply();
       }
 
+      /* ===== 聚焦：一二阶高亮 + 无关淡化 ===== */
       function focus(id) {
-        var nd = g.byId[id];
-        if (!nd) return;
-        Array.prototype.forEach.call(vp.querySelectorAll(".gnode"), function (el) {
-          el.classList.remove("focus", "dim");
+        g.selected = id;
+        var nodes = vp.querySelectorAll(".gnode");
+        var nd = g.byId[id]; if (!nd) return;
+        var idx = g.nodes.indexOf(nd);
+
+        // 一阶邻居
+        var ones = g.adj[id] ? new Set(g.adj[id]) : new Set();
+        // 二阶
+        var twos = new Set();
+        ones.forEach(function (o) { if (g.adj[o]) g.adj[o].forEach(function (p) { if (p !== id) twos.add(p); }); });
+        function cls(k) {
+          return (k === id) ? ["focus"] : (ones.has(k) ? ["rel"] : (twos.has(k) ? ["rel2"] : ["dim"]));
+        }
+        nodes.forEach(function (el, i) {
+          var nk = g.nodes[i].id;
+          el.classList.remove("focus", "dim", "rel", "rel2");
+          var c = cls(nk);
+          c.forEach(function (x) { el.classList.add(x); });
         });
-        var el = vp.querySelectorAll(".gnode")[g.nodes.indexOf(nd)];
-        if (el) el.classList.add("focus");
-        var detail = document.getElementById("gdetail");
-        detail.hidden = false;
-        detail.innerHTML = '<div class="d-title">' + esc(nd.label) + '</div><div class="d-desc">' + esc(nd.desc || "") + "</div>" +
-          (nd.qa && nd.qa.length ? '<div style="margin-top:10px;border-top:1px solid var(--c-border);padding-top:8px;font-size:12.5px;color:#cdd5e2">' +
-            nd.qa.map(function (q) { return '<b style="display:block;margin:4px 0">' + esc(q.q) + "</b>" + esc(q.a); }).join("") + "</div>" : "");
+        // 边高亮/淡化
+        vp.querySelectorAll(".gedge").forEach(function (el) { el.classList.remove("active", "faded"); });
+        vp.querySelectorAll(".gedge-label").forEach(function (l) { l.style.opacity = "0"; });
+        g.edges.forEach(function (e, i) {
+          var anode = e.from === id || e.to === id, bnode = ones.has(e.from) || ones.has(e.to);
+          var edgeEls = vp.querySelectorAll(".gedge");
+          var el = edgeEls[i]; if (!el) return;
+          if (anode) el.classList.add("active"); else if (bnode) {} else el.classList.add("faded");
+        });
+        // 显示选中节点相邻边文字
+        ensureLabels();
+        showDetail(nd);
+      }
+
+      function ensureLabels() {
+        vp.querySelectorAll(".gedge-label").forEach(function (l) { l.style.opacity = "0"; });
+        g.edges.forEach(function (e, i) {
+          if (e.from === g.selected || e.to === g.selected) {
+            var l = vp.querySelectorAll(".gedge-label")[i];
+            if (l) l.style.opacity = "1";
+          }
+        });
+      }
+
+      /* ===== 详情面板（增强） ===== */
+      function showDetail(nd) {
+        var d = document.getElementById("gdetail");
+        d.hidden = false;
+        var typeLabel = ({ source: "来源", entity: "实体", concept: "概念" })[nd.type] || "节点";
+        var kw = (nd.keywords || []).slice(0, 10);
+        var tags = (nd.tags || []).slice(0, 12);
+        var html = '<span class="d-type" style="color:' + nd.color + '">' + typeLabel + "</span>";
+        html += '<div class="d-title">' + esc(nd.label) + "</div>";
+        html += '<div class="d-desc">' + esc(nd.desc || "") + "</div>";
+        html += '<h4>元信息</h4><div class="meta-row">发布时间：' + esc(nd.date_published || "—") + "</div>";
+        if (tags.length) html += '<h4>标签</h4><div>' + tags.map(function (t) { return '<span class="tag">' + esc(t) + "</span>"; }).join("") + "</div>";
+        if (kw.length) html += '<h4>关键词</h4><div>' + kw.map(function (k) { return '<span class="tag">' + esc(k) + "</span>"; }).join("") + "</div>";
+        if (nd.links && (nd.links.entities.length || nd.links.concepts.length)) {
+          html += '<h4>关联</h4>';
+          (nd.links.entities || []).forEach(function (nm) { html += '<div class="rel-chip" data-goto="' + esc(nm) + '">▸ ' + esc(nm) + "</div>"; });
+          (nd.links.concepts || []).forEach(function (nm) { html += '<div class="rel-chip" data-goto="' + esc(nm) + '">◇ ' + esc(nm) + "</div>"; });
+        }
+        if (nd.url) html += '<a class="d-link" href="' + esc(nd.url) + '" target="_blank" rel="noopener">↗ 原文链接</a>';
+        d.innerHTML = html;
+        d.querySelectorAll(".rel-chip").forEach(function (chip) {
+          chip.onclick = function () {
+            var to = chip.dataset.goto;
+            var target = g.byId[to] || g.nodes.filter(function (n) { return n.label === to; })[0];
+            if (target) focus(target.id);
+          };
+        });
       }
 
       // 平移 / 缩放
       stage.addEventListener("mousedown", function (e) {
-        if (e.target.closest(".gnode")) return;
+        if (e.target.closest(".gnode") || e.target.closest(".g-detail")) return;
         var sx = e.clientX, sy = e.clientY, from = { x: g.pan.x, y: g.pan.y };
         function mv(ev) { g.pan.x = from.x + (ev.clientX - sx); g.pan.y = from.y + (ev.clientY - sy); apply(); }
         function up() { window.removeEventListener("mousemove", mv); window.removeEventListener("mouseup", up); }
@@ -154,7 +352,7 @@
         e.preventDefault();
         var rect = stage.getBoundingClientRect();
         var cx = e.clientX - rect.left, cy = e.clientY - rect.top;
-        var nz = Math.min(3, Math.max(0.4, g.zoom * (e.deltaY < 0 ? 1.12 : 0.9)));
+        var nz = Math.min(3, Math.max(0.35, g.zoom * (e.deltaY < 0 ? 1.12 : 0.9)));
         var k = nz / g.zoom;
         g.pan.x = cx - (cx - g.pan.x) * k;
         g.pan.y = cy - (cy - g.pan.y) * k;

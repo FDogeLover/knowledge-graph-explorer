@@ -191,6 +191,21 @@ def graph_data():
     palette = {"source": "#4c8bf5", "entity": "#f59e0b", "concept": "#a855f7"}
     names = {"source": "来源", "entity": "实体", "concept": "概念"}
 
+    # 反向邻接：记录每个实体/概念被哪些来源关联（供详情面板展示双向关联）
+    reverse = {m.id: {"entities": [], "concepts": []} for m in metas}
+    for m in metas:
+        if m.type == "source":
+            for e in (m.related_entities or []):
+                nm = e.get("name", e) if isinstance(e, dict) else str(e)
+                tid = slug_a(nm)
+                if tid in reverse and tid != m.id:
+                    reverse[tid]["entities"].append(m.id)
+            for c in (m.related_concepts or []):
+                nm = c.get("name", c) if isinstance(c, dict) else str(c)
+                tid = slug_a(nm)
+                if tid in reverse and tid != m.id:
+                    reverse[tid]["concepts"].append(m.id)
+
     nodes, nids = [], set()
     for m in metas:
         if m.id in nids:
@@ -198,10 +213,26 @@ def graph_data():
         nids.add(m.id)
         color = palette.get(m.type, "#3b82f6")
         node_type = names.get(m.type, m.type)
+        # 合并前向+反向关联：source 有前向，entity/concept 靠反向
+        if m.type == "source":
+            links = {
+                "entities": [e.get("name", e) if isinstance(e, dict) else str(e) for e in (m.related_entities or [])],
+                "concepts": [c.get("name", c) if isinstance(c, dict) else str(c) for c in (m.related_concepts or [])],
+            }
+        else:
+            links = {
+                "entities": reverse.get(m.id, {}).get("entities", []),
+                "concepts": reverse.get(m.id, {}).get("concepts", []),
+            }
         nodes.append({
             "id": m.id, "label": m.title or m.id, "category": node_type,
             "desc": m.summary or f"{node_type}「{m.title or m.id}」",
             "color": color, "type": m.type,
+            "keywords": m.keywords or [],
+            "tags": m.tags or [],
+            "date_published": m.date_published or m.created_at,
+            "url": m.source_url or "",
+            "links": links,
             "qa": [{"q": f"这是什么{node_type}？",
                     "a": (m.summary or f"{node_type}「{m.title or m.id}」") +
                          (f"，收录于主题「{m.topic or '未归类'}」。" if m.topic else "。")}],
