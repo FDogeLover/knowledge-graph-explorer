@@ -39,18 +39,16 @@
   <script src="/js/common.js?v=2"></script>
   <script>
     var cur = 1;
-    var state = { root: "", topics: ["默认主题"] };
+    var done = false;   // 是否已执行初始化（第 5 步按钮或第 5→6 兜底）
+    var state = { root: "", topics: [], seed: false };
 
-    function step(d) {
-      cur = Math.max(1, Math.min(5, cur + d));
-      render();
-    }
     function render() {
       var info = document.getElementById("stepInfo");
       var body = document.getElementById("stepBody");
       document.getElementById("prevBtn").disabled = cur === 1;
-      document.getElementById("nextBtn").textContent = cur === 6 ? "完成初始化" : "下一步";
-      var steps = ["数据目录", "模板选择", "主题预设", "标签规则", "示例知识库", "完成"];
+      var nextBtn = document.getElementById("nextBtn");
+      nextBtn.style.display = "inline-flex";
+      nextBtn.textContent = cur === 6 ? "完成 → 去总览" : "下一步";
 
       if (cur === 1) {
         info.textContent = "第 1/6 步 · 数据目录";
@@ -69,50 +67,50 @@
         body.innerHTML =
           '<div style="color:var(--c-dim);font-size:13px;line-height:1.7;margin-bottom:10px">选择一个初始形态：<b>开箱即用</b>（加载示例：3 来源 + 4 实体 + 4 概念的双链知识库）或<b>从零开始</b>（空库，之后自行采集）。</div>' +
           '<div class="row"><button type="button" class="btn" id="useSeedBtn">加载示例知识库</button>' +
-          '<button type="button" class="btn ghost" id="emptyBtn">从空库开始</button></div>';
-        // 绑定选择
-        var setupDone = function (extra) {
-          (async function () {
-            try {
-              var r = await api.post("/api/setup", { root: state.root || null, topics: state.topics, templates: true });
-              if (extra) { await api.post("/api/setup/seed", {}); }
-              var s = await api.get("/api/stats/overview");
-              toast(extra ? "已加载示例知识库 ✅" : "已创建空库，可从「采集」开始");
-              document.getElementById("stepBody").innerHTML = extra
-                ? '<div style="color:#2f9e7a;font-size:14px">✅ 示例知识库就绪：' + s.daily.summary.total + ' 篇笔记 · ' + s.daily.summary.topics + ' 个主题 · 图谱 ' + s.structure.topic_count + ' 主题</div>'
-                : '<div style="color:#2f9e7a;font-size:14px">✅ 空库已就绪，可在「采集」页开始收录内容</div>';
-              document.getElementById("nextBtn").style.display = "none";
-            } catch (e) { toast("初始化失败：" + e.message, true); }
-          })();
-        };
+          '<button type="button" class="btn ghost" id="emptyBtn">从空库开始</button></div>' +
+          '<div style="color:var(--c-dim);font-size:12px;margin-top:12px">不想现在选择？点「下一步」将按默认配置创建空库（后续可在「设置」页初始化）。</div>';
+        // 绑定选择 → 直接执行初始化并进入第 6 步
         var b1 = document.getElementById("useSeedBtn");
         var b2 = document.getElementById("emptyBtn");
-        b1.onclick = function () { b1.disabled = true; b2.disabled = true; setupDone(true); };
-        b2.onclick = function () { b1.disabled = true; b2.disabled = true; setupDone(false); };
-        // 初始读入 root/topics（供后续使用）
-        if (document.getElementById("root")) state.root = document.getElementById("root").value.trim();
-        if (document.getElementById("topics")) state.topics = document.getElementById("topics").value.split(/[,，]/).map(function (s) { return s.trim(); }).filter(Boolean);
-        return; // 已由按钮触发完成，不走下一步
+        b1.onclick = function () { b1.disabled = true; b2.disabled = true; initNow(true); };
+        b2.onclick = function () { b1.disabled = true; b2.disabled = true; initNow(false); };
       } else {
         info.textContent = "第 6/6 步 · 完成";
-        body.innerHTML = '<div style="color:var(--c-dim);font-size:13px;line-height:1.7">在上一页选择「加载示例知识库」或「从空库开始」，即可完成初始化。</div>';
+        document.getElementById("nextBtn").textContent = "完成 → 去总览";
+        body.innerHTML = done
+          ? '<div style="color:#2f9e7a;font-size:14px;line-height:1.8">✅ 初始化完成。<br>' +
+            (state.seed ? "已加载示例知识库（双链示例：来源/实体/概念），可直接在「知识结构」页查看图谱。" : "已创建空库。可从「采集」页用链接 / 粘贴 / AI 方向采集开始收录内容。") +
+            '<br>数据根目录：<code>' + (state.root || "data/") + "</code></div>"
+          : '<div style="color:var(--c-dim);font-size:13px;line-height:1.7">尚未执行初始化。点「完成」会以默认配置创建空库（数据目录 data/、默认主题），之后可在「设置」页补充。</div>';
       }
     }
 
-    // 完成初始化（兜底：若直接点到底）
-    document.getElementById("nextBtn").onclick = async function () {
-      if (cur < 5) { step(1); return; }
-      if (cur === 5 || cur === 6) {
-        // 已在第 5 步通过按钮完成，或到达第 6 步——回退引导
-        step(-1); return;
-      }
+    function readForm() {
       if (document.getElementById("root")) state.root = document.getElementById("root").value.trim();
-      if (document.getElementById("topics")) state.topics = document.getElementById("topics").value.split(/[,，]/).map(function (s) { return s.trim(); }).filter(Boolean);
+      if (document.getElementById("topics")) {
+        state.topics = document.getElementById("topics").value.split(/[,，]/).map(function (s) { return s.trim(); }).filter(Boolean);
+      }
+    }
+
+    async function initNow(seed) {
+      readForm();
       try {
-        var r = await api.post("/api/setup", { root: state.root || null, topics: state.topics, templates: true });
-        toast("初始化完成，数据根目录：" + r.root);
-        document.getElementById("stepBody").innerHTML = '<div style="color:#2f9e7a;font-size:14px">✅ 已就绪：主题 ' + r.topics.length + ' 个，模板 ' + r.templates.length + ' 个</div>';
+        await api.post("/api/setup", { root: state.root || null, topics: state.topics.length ? state.topics : null, templates: true });
+        if (seed) { await api.post("/api/setup/seed", {}); }
+        state.seed = seed;
+        done = true;
+        cur = 6;
+        render();
+        toast(seed ? "示例知识库已加载 ✅" : "空库已创建 ✅");
       } catch (e) { toast("初始化失败：" + e.message, true); }
+    }
+
+    // 上一步 / 下一步 / 完成：统一入口（不再有「跳回第 4 步」的旧逻辑）
+    document.getElementById("prevBtn").onclick = function () { if (cur > 1) { cur--; render(); } };
+    document.getElementById("nextBtn").onclick = function () {
+      if (cur === 6) { location.href = "/"; return; }   // 完成 → 总览
+      if (cur === 5 && !done) { initNow(false); return; } // 第 5 步跳过 → 默认空库初始化
+      if (cur < 5) { cur++; render(); }
     };
     render();
   </script>

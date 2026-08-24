@@ -183,6 +183,11 @@ def delete_one(note_id: str):
     ok = store.delete_note(note_id)
     if not ok:
         raise HTTPException(404, "笔记不存在")
+    # 联动清理：重建索引/标签表/主题表（孤儿标签、图表引用随之移除）
+    try:
+        indexer.rebuild()
+    except Exception:  # noqa: BLE001
+        pass
     return {"ok": True}
 
 
@@ -286,6 +291,12 @@ def stats_overview():
 @router.get("/tasks")
 def tasks_list():
     return {"tasks": manager.list()}
+
+
+@router.post("/tasks/clear")
+def tasks_clear():
+    """清空全部已完成（done/error）任务。"""
+    return {"ok": True, "removed": manager.clear_finished()}
 
 
 @router.get("/tasks/{task_id}")

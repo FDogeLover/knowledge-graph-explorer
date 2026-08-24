@@ -71,6 +71,10 @@
       if (kind === "url") {
         var url = document.getElementById("url").value.trim();
         if (!url) return toast("请输入链接", true);
+        // URL 格式校验：拦截无效地址，避免提交一个必失败的采集任务
+        if (!/^https?:\/\/[^\s]+$/i.test(url)) {
+          return toast("链接格式无效：需以 http:// 或 https:// 开头", true);
+        }
         body = { url: url, topic: document.getElementById("urlTopic").value.trim(), tags: splitTags("urlTags") };
       } else {
         var text = document.getElementById("txt").value.trim();
@@ -92,6 +96,7 @@
     async function doDirection() {
       var direction = document.getElementById("direction").value.trim();
       if (!direction) return toast("请输入采集方向", true);
+      if (direction.length > 80) return toast("采集方向过长（≤80 字），请精简", true);
       try {
         var r = await api.post("/api/collect/direction", {
           direction: direction,

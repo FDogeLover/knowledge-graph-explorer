@@ -24,18 +24,83 @@
 
   <div class="wrap">
     <h1>任务中心</h1>
-    <p class="sub">采集 / 全库整理 / 生成报告等长任务在此查看进度。</p>
+    <p class="sub">采集 / 全库整理 / 生成报告等长任务在此查看进度。已完成任务保留最近 50 条。</p>
     <button class="btn ghost" onclick="load()">刷新</button>
+    <button class="btn ghost" id="clearBtn" onclick="clearDone()">清空已完成任务</button>
     <div style="height:12px"></div>
-    <table>
-      <thead><tr><th>任务</th><th>状态</th><th>进度</th><th>创建时间</th><th>结果</th></tr></thead>
-      <tbody id="body"></tbody>
-    </table>
+    <div style="overflow-x:auto">
+      <table>
+        <thead><tr><th>任务</th><th>状态</th><th>进度</th><th>创建时间</th><th>结果</th></tr></thead>
+        <tbody id="body"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- 结果详情弹层 -->
+  <div id="resultModal" style="display:none;position:fixed;inset:0;z-index:400;background:rgba(4,7,12,.6);backdrop-filter:blur(4px);align-items:center;justify-content:center;padding:20px" onclick="if(event.target===this)hideModal()">
+    <div style="max-width:720px;width:100%;max-height:82vh;overflow:auto;border:1px solid var(--c-border);border-radius:14px;background:#0d1420;padding:18px;box-shadow:0 12px 40px rgba(0,0,0,.55)">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+        <b id="modalTitle" style="font-size:14px"></b>
+        <button class="g-detail-close" onclick="hideModal()" style="position:static;width:26px;height:26px;display:flex;align-items:center;justify-content:center;border-radius:50%;background:rgba(255,255,255,.08);color:var(--c-dim);border:none;cursor:pointer">✕</button>
+      </div>
+      <pre id="modalBody" style="font-size:11.5px;line-height:1.65;white-space:pre-wrap;word-break:break-all;color:#cdd8e8;margin:0;font-family:ui-monospace,Consolas,monospace"></pre>
+    </div>
   </div>
 
   <script src="/js/common.js?v=2"></script>
   <script>
     function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
+    // 结果摘要：截断显示，最多 2 行
+    function summaryOf(t) {
+      if (t.status === "error") { return errorShort(t.error); }
+      if (!t.result) return "—";
+      try {
+        var r = t.result;
+        if (typeof r === "object") {
+          var parts = [];
+          if (r.note_id) parts.push("笔记 " + r.note_id);
+          if (r.title) parts.push(r.title);
+          if (r.cleaned && typeof r.cleaned === "object") {
+            if (r.cleaned.ok !== undefined) parts.push("已整理");
+            if (r.cleaned.total !== undefined) parts.push("共 " + r.cleaned.total + " 篇");
+            if (r.cleaned.n_notes !== undefined) parts.push("共 " + r.cleaned.n_notes + " 篇");
+          }
+          if (typeof r.summary === "object" && r.summary) parts.push("摘要已生成");
+          if (parts.length) return parts.join(" · ");
+          return (r.message || r.status || JSON.stringify(r)).slice(0, 80);
+        }
+        return String(r).slice(0, 80);
+      } catch (e) { return "可点击查看"; }
+    }
+    function errorShort(e) {
+      if (!e) return "未知错误";
+      var s = String(e);
+      return s.length > 80 ? s.slice(0, 80) + "…" : s;
+    }
+    function prettyJson(v) {
+      if (v == null) return "无";
+      if (typeof v === "string") {
+        try { return JSON.stringify(JSON.parse(v), null, 2); } catch (e) { return v; }
+      }
+      return JSON.stringify(v, null, 2);
+    }
+    function showModal(t) {
+      document.getElementById("modalTitle").textContent = (t.name || "任务") + " · " + (t.status === "error" ? "错误详情" : "结果详情");
+      var body = t.status === "error"
+        ? "错误信息：\n" + prettyJson(t.error) + "\n\n任务参数：\n" + prettyJson({ name: t.name, created_at: t.created_at })
+        : prettyJson(t.result);
+      document.getElementById("modalBody").textContent = body;
+      var m = document.getElementById("resultModal");
+      m.style.display = "flex";
+    }
+    function hideModal() { document.getElementById("resultModal").style.display = "none"; }
+    async function clearDone() {
+      try {
+        var r = await api.post("/api/tasks/clear", {});
+        toast("已清空 " + r.removed + " 条已完成任务");
+        load();
+      } catch (e) { toast("清空失败：" + e.message, true); }
+    }
     async function load() {
       try {
         var d = await api.get("/api/tasks");
@@ -44,17 +109,23 @@
         d.tasks.forEach(function (t) {
           var tr = document.createElement("tr");
           var color = t.status === "done" ? "#2f9e7a" : t.status === "error" ? "#e04f4f" : "#f59e0b";
-          tr.innerHTML = "<td>" + esc(t.name) + "</td>" +
+          tr.innerHTML =
+            "<td><b>" + esc(t.name) + "</b></td>" +
             '<td style="color:' + color + '">' + esc(t.status) + "</td>" +
             '<td><div class="progress" style="width:120px"><i style="width:' + Math.round((t.progress || 0) * 100) + '%"></i></div></td>' +
             "<td>" + esc(t.created_at) + "</td>" +
-            "<td style='font-size:12px;color:var(--c-dim)'>" + esc(JSON.stringify(t.result || t.error || "")) + "</td>";
+            '<td class="res-cell"><span class="res-text" title="点击查看完整详情">' + esc(summaryOf(t)) + "</span></td>";
+          // 用引号安全的调用：通过 data 属性 + 事件委托更稳，直接给单元格绑定点击
+          var resCell = tr.querySelector(".res-cell");
+          resCell.onclick = (function (tt) { return function () { showModal(tt); }; })(t);
+          resCell.style.cursor = "pointer";
           body.appendChild(tr);
         });
       } catch (e) { toast("加载失败：" + e.message, true); }
     }
+    // 轮询：页面不可见（切后台标签）时跳过重绘，避免滚动干扰
     load();
-    setInterval(load, 2500);
+    setInterval(function () { if (!document.hidden) { var o = document.activeElement; if (!o || o.tagName !== "INPUT") load(); } }, 2500);
   </script>
 </body>
 </html>

@@ -70,35 +70,65 @@ def _detect_provider(base_url: str, provider: str) -> str:
 
 def _call_openai_chat(cfg, system, user, temperature):
     url = cfg["base_url"].rstrip("/") + "/chat/completions"
-    payload = {
+    base = {
         "model": cfg["model"],
         "temperature": temperature,
-        "response_format": {"type": "json_object"},
         "messages": [
             {"role": "system", "content": system},
             {"role": "user", "content": user},
         ],
     }
     headers = {"Authorization": f"Bearer {cfg['api_key']}", "Content-Type": "application/json"}
-    resp = httpx.post(url, json=payload, headers=headers, timeout=90)
-    _raise_for(resp)
-    return _safe_jsonify(resp.json()["choices"][0]["message"]["content"])
+    # 先试 response_format=json_object；部分模型（如某些 deepseek 版本）不支持→降级重试
+    try:
+        resp = httpx.post(url, json={**base, "response_format": {"type": "json_object"}},
+                          headers=headers, timeout=90)
+        _raise_for(resp)
+        return _safe_jsonify(resp.json()["choices"][0]["message"]["content"])
+    except RuntimeError as e:
+        if _is_json_obj_error(e):
+            resp = httpx.post(url, json=base, headers=headers, timeout=90)
+            _raise_for(resp)
+            return _safe_jsonify(resp.json()["choices"][0]["message"]["content"])
+        raise
+
+
+def _is_json_obj_error(e: Exception) -> bool:
+    """判断错误是否因 response_format/json_object 不被模型支持（400 类）。"""
+    s = str(e).lower()
+    return ("json" in s or "response_format" in s or "structured output" in s or "schema" in s) and "400" in s
 
 
 def _call_openai_responses(cfg, system, user, temperature):
     base = cfg["base_url"].rstrip("/")
     url = base + "/responses" if not base.endswith("/responses") else base
-    payload = {
+    payload_json_fmt = {
         "model": cfg["model"],
         "temperature": temperature,
         "instructions": system,
         "input": user,
         "text": {"format": {"type": "json_object"}},
     }
+    payload_plain = {
+        "model": cfg["model"],
+        "temperature": temperature,
+        "instructions": system,
+        "input": user,
+    }
     headers = {"Authorization": f"Bearer {cfg['api_key']}", "Content-Type": "application/json"}
-    resp = httpx.post(url, json=payload, headers=headers, timeout=90)
-    _raise_for(resp)
-    data = resp.json()
+    try:
+        resp = httpx.post(url, json=payload_json_fmt, headers=headers, timeout=90)
+        _raise_for(resp)
+        return _extract_responses_text(resp.json())
+    except RuntimeError as e:
+        if _is_json_obj_error(e):
+            resp = httpx.post(url, json=payload_plain, headers=headers, timeout=90)
+            _raise_for(resp)
+            return _extract_responses_text(resp.json())
+        raise
+
+
+def _extract_responses_text(data: dict) -> dict:
     # Responses API：文本在 output[].content[].text，或便捷字段 output_text
     if data.get("output_text"):
         return _safe_jsonify(data["output_text"])

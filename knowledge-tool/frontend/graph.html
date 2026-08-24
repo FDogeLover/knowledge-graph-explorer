@@ -105,6 +105,16 @@
 
     /* 连线穿透：画布层 z-index 1 < 节点20 < 面板60；面板不穿透 */
     .g-detail { position: absolute; top: 50px; right: 12px; width: 320px; max-height: calc(100% - 66px); overflow: auto; border: 1px solid var(--c-border); border-radius: 12px; background: rgba(11,17,27,0.96); padding: 16px; z-index: 60; box-shadow: 0 8px 30px rgba(0,0,0,.5); }
+
+    /* ===== 搜索 / 类型过滤工具条 ===== */
+    .graph-tools { position: absolute; top: 12px; left: 12px; z-index: 35; display: flex; gap: 8px; align-items: center; }
+    .gsearch { width: 190px; padding: 6px 12px; font-size: 12.5px; border-radius: 999px; background: rgba(11,17,27,.72); border: 1px solid var(--c-border); color: var(--c-text); outline: none; transition: border-color .18s; }
+    .gsearch:focus { border-color: #4c8bf5; }
+    .gsearch::placeholder { color: rgba(233,240,250,.45); }
+    .gtypes { display: flex; gap: 4px; background: rgba(11,17,27,.72); padding: 3px; border-radius: 999px; border: 1px solid var(--c-border); }
+    .gtypes button { border: none; background: transparent; color: var(--c-dim); font-size: 11.5px; padding: 4px 10px; border-radius: 999px; cursor: pointer; white-space: nowrap; transition: all .15s; }
+    .gtypes button:hover { color: var(--c-text); }
+    .gtypes button.active { background: #4c8bf5; color: #fff; font-weight: 600; }
     .g-detail-close {
       position: absolute; top: 10px; right: 10px; width: 26px; height: 26px; padding: 0;
       display: flex; align-items: center; justify-content: center; cursor: pointer; border: none;
@@ -134,6 +144,9 @@
     @media (max-width: 700px) {
       .g-detail { left: 8px; right: 8px; top: auto; bottom: max(8px, env(safe-area-inset-bottom, 8px)); width: auto; max-height: 55vh; border-radius: 16px; }
       .graph-hint { right: 10px; bottom: max(10px, env(safe-area-inset-bottom, 10px)); }
+      .graph-tools { top: 10px; left: 10px; right: 10px; flex-wrap: wrap; gap: 6px; }
+      .gsearch { flex: 1; min-width: 120px; }
+      .gtypes button { padding: 4px 8px; font-size: 11px; }
       .gnode.type-entity .gtext { font-size: 13px; }
       .gnode.type-concept .gtext { font-size: 11.5px; }
       .gnode.type-source .gtext { font-size: 10.5px; }
@@ -162,6 +175,15 @@
 
     <div class="graph-stage" id="stage">
       <div id="vp"></div>
+      <div class="graph-tools" id="gtools">
+        <input id="gsearch" class="gsearch" type="text" placeholder="搜索节点… (Ctrl+K)" />
+        <div class="gtypes" id="gtypes">
+          <button data-t="" class="active">全部</button>
+          <button data-t="source">来源</button>
+          <button data-t="entity">实体</button>
+          <button data-t="concept">概念</button>
+        </div>
+      </div>
       <button class="graph-legend-btn" id="legendBtn" title="图例说明">ℹ️</button>
       <div class="legend-modal" id="legendModal" hidden>
         <h4>图例说明</h4>
@@ -183,7 +205,7 @@
       "use strict";
       var stage = document.getElementById("stage");
       var vp = document.getElementById("vp");
-      var g = { nodes: [], byId: {}, edges: [], zoom: 1, pan: { x: 0, y: 0 }, selected: null };
+      var g = { nodes: [], byId: {}, edges: [], rawNodes: [], rawEdges: [], zoom: 1, pan: { x: 0, y: 0 }, selected: null, fType: "" };
 
       function apply() { vp.style.transform = "translate(" + g.pan.x + "px," + g.pan.y + "px) scale(" + g.zoom + ")"; }
 
@@ -243,8 +265,10 @@
         return Math.min(size, s.max);
       }
 
-      function render(data) {
+      function render(data, opts) {
+        opts = opts || {};
         g.nodes = data.nodes; g.byId = {}; g.edges = data.edges; g.adj = {};
+        if (!opts.filtered) { g.rawNodes = data.nodes; g.rawEdges = data.edges; }
         g.nodes.forEach(function (nd) { g.byId[nd.id] = nd; });
         var deg = {};
         g.edges.forEach(function (e) { deg[e.from]=(deg[e.from]||0)+1; deg[e.to]=(deg[e.to]||0)+1; });
@@ -258,16 +282,23 @@
         layout();
         vp.innerHTML = "";
 
-        // ---- 边 ----
+        // ---- 边（缩短到节点边缘，避免线条贯穿节点；零长度边防御跳过） ----
         data.edges.forEach(function (e) {
           var a = g.byId[e.from], b = g.byId[e.to];
           if (!a || !b) return;
           var dx = b.x - a.x, dy = b.y - a.y;
-          var len = Math.hypot(dx, dy), ang = Math.atan2(dy, dx) * 180 / Math.PI;
+          var len = Math.hypot(dx, dy);
+          if (len < 2) return;                    // 防 0/近零长度异常边（渲染异常竖线/点）
+          var ang = Math.atan2(dy, dx) * 180 / Math.PI;
+          var ux = dx / len, uy = dy / len;
+          var r1 = (a._size || 30) / 2 + 4, r2 = (b._size || 30) / 2 + 4;
+          var drawLen = len - r1 - r2;
+          var ox = a.x + ux * r1, oy = a.y + uy * r1;
+          if (drawLen < 8) { drawLen = len; ox = a.x; oy = a.y; }  // 距离不足时回退整线
           var el = document.createElement("div");
           el.className = "gedge";
           el.dataset.edge = "1";
-          el.style.cssText = "left:" + a.x + "px;top:" + a.y + "px;width:" + len + "px;height:2px;transform:rotate(" + ang + "deg)";
+          el.style.cssText = "left:" + ox + "px;top:" + oy + "px;width:" + drawLen + "px;height:2px;transform:rotate(" + ang + "deg)";
           var line = document.createElement("i");
           var isEntity = (e.label || "").indexOf("实体") >= 0;
           line.className = isEntity ? "ent" : "con";
@@ -317,10 +348,30 @@
 
         g.zoom = 1; g.pan = { x: 0, y: 0 };
         fit();
-        if (data.nodes.length) {
+        if (data.nodes.length && opts.autoFocus !== false) {
           g.suppressPan = true;
           focus(data.nodes[0].id);
           g.suppressPan = false;
+        }
+      }
+
+      /* ===== 搜索 / 类型过滤：从原始数据按条件构建子集重渲染 ===== */
+      function applyFilter() {
+        var q = (document.getElementById("gsearch").value || "").trim().toLowerCase();
+        var set = g.rawNodes.filter(function (nd) {
+          if (g.fType && nd.type !== g.fType) return false;
+          if (q && (nd.label || "").toLowerCase().indexOf(q) < 0 && (nd.desc || "").toLowerCase().indexOf(q) < 0) return false;
+          return true;
+        }).map(function (n) { return n.id; });
+        set = new Set(set);
+        var nodes = g.rawNodes.filter(function (n) { return set.has(n.id); });
+        var edges = g.rawEdges.filter(function (e) { return set.has(e.from) && set.has(e.to); });
+        // 过滤后自动聚焦首个匹配节点（搜索→直接看详情），无匹配则提示
+        render({ nodes: nodes, edges: edges }, { filtered: true, autoFocus: true });
+        if (!nodes.length) {
+          document.getElementById("ghint").textContent = q ? "无匹配节点，已清空或调整关键词" : "该类型下暂无节点";
+        } else {
+          document.getElementById("ghint").textContent = "拖动平移 · 滚轮缩放 · 点击查看";
         }
       }
 
@@ -342,6 +393,8 @@
         g.selected = id;
         g.hoverNode = null;                       // 切换焦点时清空悬停，文字恢复隐藏
         stage.classList.remove("edge-label-show");
+        // 图例与详情互斥：聚焦节点时收起图例弹窗
+        document.getElementById("legendModal").hidden = true;
         var nodes = vp.querySelectorAll(".gnode");
         var nd = g.byId[id]; if (!nd) return;
         var idx = g.nodes.indexOf(nd);
@@ -537,7 +590,40 @@
         }
       });
 
-      api.get("/api/graph/data").then(render).catch(function (e) {
+      /* ===== 搜索 / 类型过滤事件绑定 ===== */
+      var gsearch = document.getElementById("gsearch");
+      var gtimer = null;
+      gsearch.addEventListener("input", function () {
+        clearTimeout(gtimer);
+        gtimer = setTimeout(applyFilter, 180);   // 防抖：输入即过滤
+      });
+      document.querySelectorAll("#gtypes button").forEach(function (btn) {
+        btn.addEventListener("click", function () {
+          document.querySelectorAll("#gtypes button").forEach(function (b) { b.classList.remove("active"); });
+          btn.classList.add("active");
+          g.fType = btn.dataset.t || "";
+          applyFilter();
+        });
+      });
+      // Ctrl+K：聚焦搜索框
+      document.addEventListener("keydown", function (e) {
+        if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
+          e.preventDefault();
+          gsearch.focus();
+          gsearch.select();
+        }
+        // Esc：退出搜索框
+        if (e.key === "Escape" && document.activeElement === gsearch) {
+          e.preventDefault();
+          gsearch.blur();
+        }
+      });
+
+      // 初次加载：直接渲染（非过滤态），随后 data 可用时保留原始集
+      api.get("/api/graph/data").then(function (data) {
+        g.rawNodes = data.nodes; g.rawEdges = data.edges;
+        render(data);
+      }).catch(function (e) {
         document.getElementById("ghint").textContent = "加载失败：" + e.message;
       });
     })();
