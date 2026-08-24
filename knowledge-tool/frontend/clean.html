@@ -41,6 +41,13 @@
     </div>
 
     <div class="panel">
+      <h2>实体/概念聚合补全 <span class="tag">需 LLM</span></h2>
+      <p style="color:var(--c-dim);font-size:13px;margin-bottom:12px">对被 2 篇以上来源引用的实体/概念页，用 LLM 把各来源信息综合成「概览」写入骨架页——解决图谱节点「有的丰富有的单薄」。单引用的新节点会自动跳过。</p>
+      <button class="btn ghost" id="aggBtn" onclick="aggregateAll()">AI 聚合补全实体/概念</button>
+      <div class="progress" id="aggProgress" hidden><i></i></div>
+    </div>
+
+    <div class="panel">
       <h2>整理结果</h2>
       <table>
         <thead><tr><th>笔记</th><th>关键词</th><th>标签</th></tr></thead>
@@ -87,6 +94,22 @@
           var sk = res && res.skeletons_created ? res.skeletons_created : {};
           toast("AI 增强完成：" + (res ? res.cleaned : "?") + "/" + (res ? res.total : "?") +
             (sk.entity ? "（新建实体+" + sk.entity + " 概念+" + sk.concept + "）" : ""));
+        });
+      } catch (e) {
+        toast("提交失败：" + e.message, true);
+        btn.disabled = false;
+      }
+    }
+    async function aggregateAll() {
+      var btn = document.getElementById("aggBtn");
+      try {
+        btn.disabled = true;
+        var r = await api.post("/api/notes/aggregate-all");
+        document.getElementById("aggProgress").hidden = false;
+        toast("已提交 AI 聚合补全");
+        pollTask(r.task_id, function (res) {
+          if (res && res.error) return toast("聚合失败：" + res.error, true);
+          toast("聚合完成：" + (res ? res.aggregated : "?") + " 个节点补全" + (res && res.skipped ? "，" + res.skipped + " 个单引用跳过" : ""));
         });
       } catch (e) {
         toast("提交失败：" + e.message, true);

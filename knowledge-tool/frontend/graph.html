@@ -140,6 +140,14 @@
     .g-detail .d-link { display: block; margin-top: 8px; font-size: 12px; color: #7fb2ff; word-break: break-all; }
     .g-detail .rel-chip { display: block; padding: 7px 10px; margin: 4px 0; border-radius: 8px; font-size: 12.5px; color: var(--c-text); cursor: pointer; transition: background .15s; border-left: 2px solid transparent; line-height: 1.5; word-break: break-all; }
     .g-detail .rel-chip:hover { background: rgba(255,255,255,.06); border-left-color: var(--gc); }
+    /* AI 聚合补全按钮（实体/概念详情内） */
+    .d-agg {
+      display: inline-block; margin: 10px 0 2px; padding: 5px 12px; cursor: pointer;
+      font-size: 11.5px; color: #7fb2ff; border: 1px solid rgba(127,178,255,.35);
+      border-radius: 999px; background: rgba(127,178,255,.08); transition: all .15s;
+    }
+    .d-agg:hover { background: rgba(127,178,255,.18); border-color: #7fb2ff; }
+    .d-agg:disabled { opacity: .5; cursor: not-allowed; }
 
     @media (max-width: 700px) {
       .g-detail { left: 8px; right: 8px; top: auto; bottom: max(8px, env(safe-area-inset-bottom, 8px)); width: auto; max-height: 55vh; border-radius: 16px; }
@@ -500,6 +508,10 @@
         var kw = (nd.keywords || []).slice(0, 10);
         var html = '<button class="g-detail-close" title="关闭详情" aria-label="关闭">✕</button>';
         html += '<span class="d-type" style="color:' + nd.color + '">' + typeLabel + "</span>";
+        // 实体/概念：提供 AI 聚合补全（多来源综合成概览，解决节点内容单薄）
+        if (nd.type === "entity" || nd.type === "concept") {
+          html += '<div><button class="d-agg" data-agg="' + esc(nd.id) + '">✨ AI 聚合补全</button></div>';
+        }
         html += '<div class="d-title">' + esc(nd.label) + "</div>";
         // 正文优先（富文本 Markdown 渲染）；无正文则用摘要
         var bodyMd = (nd.body || "").trim();
@@ -542,6 +554,20 @@
         // 关闭按钮：隐藏面板（不重触发 focus，保持图面聚焦态）
         var closeBtn = d.querySelector(".g-detail-close");
         if (closeBtn) closeBtn.onclick = function () { d.hidden = true; };
+        // AI 聚合补全：调用后端综合各来源生成概览，成功后重拉详情刷新
+        var aggBtn = d.querySelector(".d-agg");
+        if (aggBtn) aggBtn.onclick = function () {
+          var btn = this;
+          btn.disabled = true;
+          api.post("/api/notes/" + encodeURIComponent(nd.id) + "/aggregate", {}).then(function (r) {
+            if (r.skipped) { toast(r.reason || "已跳过（单引用无需聚合）"); btn.disabled = false; return; }
+            toast("已聚合补全：" + nd.label);
+            api.get("/api/notes/" + encodeURIComponent(nd.id)).then(function (n) {
+              nd.body = n.body; nd.summary = n.summary;
+              showDetail(nd);
+            }).catch(function () { btn.disabled = false; });
+          }).catch(function (e) { toast(e.message, true); btn.disabled = false; });
+        };
         d.querySelectorAll(".rel-chip").forEach(function (chip) {
           chip.onclick = function () {
             var to = chip.dataset.goto;

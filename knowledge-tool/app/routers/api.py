@@ -201,6 +201,29 @@ def enhance_all():
     return {"task_id": task_id, "status": "running"}
 
 
+# ---------- 实体/概念页聚合补全（LLM）：多来源引用 → 生成概览写入骨架页 ----------
+@router.post("/notes/{note_id}/aggregate")
+def aggregate_one(note_id: str):
+    """对单个实体/概念页做 LLM 聚合补全（收集引用来源综合成概览）。"""
+    from .. import ai_cleaner
+    if not llm.is_configured():
+        raise HTTPException(400, "未配置 LLM API Key（设置页填写 或 环境变量 LLM_API_KEY），聚合不可用")
+    try:
+        return {"ok": True, **ai_cleaner.aggregate_entity_concept(note_id)}
+    except FileNotFoundError as e:
+        raise HTTPException(404, str(e)) from e
+
+
+@router.post("/notes/aggregate-all")
+def aggregate_all():
+    """批量聚合：对所有被 ≥2 来源引用的实体/概念页生成概览（走任务中心）。"""
+    from .. import ai_cleaner
+    if not llm.is_configured():
+        raise HTTPException(400, "未配置 LLM API Key（设置页填写 或 环境变量 LLM_API_KEY），聚合不可用")
+    task_id = manager.submit("AI聚合补全", ai_cleaner.aggregate_all)
+    return {"task_id": task_id, "status": "running"}
+
+
 @router.delete("/notes/{note_id}")
 def delete_one(note_id: str):
     ok = store.delete_note(note_id)
