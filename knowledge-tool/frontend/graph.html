@@ -299,9 +299,10 @@
             el.appendChild(b);
           }
           el.onclick = function (ev) { ev.stopPropagation(); focus(nd.id); };
-          // 连线文字：仅当存在选中节点时，悬停节点才显示其相邻边的关系名
+          // 连线文字：仅当悬停的节点就是当前选中/高亮节点时，才显示其相邻边的关系名；
+          // 悬停其他（dimmed/未聚焦）节点 → 完全干净，不触发任何文字。
           el.onmouseenter = function () {
-            if (!g.selected) return;
+            if (!g.selected || nd.id !== g.selected) return;
             stage.classList.add("edge-label-show");
             g.hoverNode = nd.id;
             syncEdgeLabels();
@@ -339,6 +340,8 @@
       /* ===== 聚焦：一二阶高亮 + 无关淡化 ===== */
       function focus(id) {
         g.selected = id;
+        g.hoverNode = null;                       // 切换焦点时清空悬停，文字恢复隐藏
+        stage.classList.remove("edge-label-show");
         var nodes = vp.querySelectorAll(".gnode");
         var nd = g.byId[id]; if (!nd) return;
         var idx = g.nodes.indexOf(nd);
