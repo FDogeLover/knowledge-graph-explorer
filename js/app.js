@@ -68,6 +68,9 @@
     window.addEventListener("blur", abort); // 失焦兜底，避免"卡住"
   }
   function dist(a, b) { return Math.hypot(a.x - b.x, a.y - b.y); }
+  function isMobile() {
+    return window.matchMedia && window.matchMedia("(max-width: 700px)").matches;
+  }
   function syncTitle() {
     document.title = (G.data && G.data.title) ? G.data.title : "知识图谱探索器";
   }
@@ -300,7 +303,9 @@
   function initPhysics() {
     var W = stage.clientWidth || 1000, H = stage.clientHeight || 680;
     var cx = W / 2, cy = H / 2;
-    var base = Math.min(W, H) * 0.17;
+    var mob = isMobile();
+    // 移动端用更大的半径与更分散的环，避免节点在窄屏过度聚集
+    var base = (mob ? Math.min(W, H) * 0.34 : Math.min(W, H) * 0.17);
     var buckets = { 0: [], 1: [], 2: [], 3: [] };
     Object.keys(G.nodesById).forEach(function (k) {
       buckets[G.nodesById[k].level].push(k);
@@ -309,7 +314,7 @@
     if (G.hub) { G.nodesById[G.hub].pos = { x: cx, y: cy }; }
     [1, 2, 3].forEach(function (lv) {
       var keys = buckets[lv];
-      var R = base * (lv === 1 ? 1 : lv * 0.92);
+      var R = base * (lv === 1 ? 1 : (mob ? lv * 1.06 : lv * 0.92));
       keys.forEach(function (k, i) {
         var ang = (i / keys.length) * Math.PI * 2 - Math.PI / 2;
         G.nodesById[k].pos = {
@@ -407,7 +412,9 @@
     if (edge.hidden) return false;
     if (edge.hover || edge.active) return true;
     if (!G.selectedKey) {
-      return G.zoom >= 1.18 && a.level <= 1 && b.level <= 1;
+      // 移动端默认隐藏关系文字（减少重叠），放大到更高阈值才显示
+      var th = isMobile() ? 2.1 : 1.18;
+      return G.zoom >= th && a.level <= 1 && b.level <= 1;
     }
     return false; // 有聚焦时只保留关联边，其余降噪
   }
@@ -461,7 +468,7 @@
       updateEdgeRender(edge);
     });
     var ll = document.getElementById("edgeLabelLayer");
-    if (ll) ll.classList.toggle("zoom-hi", G.zoom >= 1.18);
+    if (ll) ll.classList.toggle("zoom-hi", G.zoom >= (isMobile() ? 2.1 : 1.18));
   }
   function refreshEdgeLabels() { renderFrame(); }
 

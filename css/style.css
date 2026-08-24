@@ -380,29 +380,58 @@ html { touch-action: manipulation; }
   #hint { display: none; }
 }
 
-/* 移动端：顶栏换行、缩小、避免溢出与互相遮挡 */
+/* 移动端：重新设计布局层级（精简导航 / 分散节点 / Bottom Sheet / Safe Area） */
 @media (max-width: 700px) {
-  .topbar { flex-wrap: wrap; gap: 8px; margin: 10px 10px 6px; padding: 10px 12px; }
-  .brand-name { font-size: 14px; }
-  .nav-actions { order: 3; width: 100%; justify-content: flex-start; }
-  .top-right { margin-left: auto; }
-  .search { width: min(46vw, 220px); }
+  /* —— 顶部导航：单行紧凑 —— */
+  .topbar { flex-wrap: nowrap; gap: 6px; margin: 8px 8px 4px; padding: 8px 10px; }
+  .brand-name { display: none; }              /* 只留 logo 点，省出横向空间 */
+  .brand-dot { width: 8px; height: 8px; }
+  .nav-actions { flex: 0 0 auto; order: 0; }
+  .theme-menu { top: 54px; left: 8px; right: auto; max-width: 78vw; }
+  .top-right { margin-left: 0; flex: 1; min-width: 0; }
+  .search { width: 100%; }
+  .search input { font-size: 12.5px; }
   #kbdHint { display: none; }
-  .stage { margin: 0 10px 4px; }
+  .icon-btn { width: 34px; height: 34px; }
+  .stage { margin: 0 8px 4px; }
 
-  /* 图例在窄屏改为顶部条状，减少底部空白与遮挡 */
+  /* —— 节点：更小 + 扩大触控热区 —— */
+  .node { touch-action: manipulation; }
+  .node.lv0 { width: 86px; height: 86px; font-size: 15px; }
+  .node.lv1 { width: 70px; height: 70px; font-size: 13px; }
+  .node.lv2 { width: 60px; height: 60px; font-size: 11.5px; }
+  .node.lv3 { width: 52px; height: 52px; font-size: 10px; }
+  .node::after { content: ""; position: absolute; inset: -12px; border-radius: 50%; } /* 触控热区 */
+
+  /* —— 关系文字：默认隐藏减少重叠，放大后再显示 —— */
+  .edge-label { display: none; }
+  .zoom-hi .edge-label { display: block; }
+
+  /* —— 图例：顶部紧凑条 + safe-area —— */
   .legend {
-    left: 10px; right: 10px; bottom: auto; top: 74px;
-    flex-direction: row; flex-wrap: wrap; gap: 4px 10px;
-    min-width: 0; padding: 8px 12px; width: auto;
+    left: 8px; right: 8px; bottom: auto; top: 60px;
+    flex-direction: row; flex-wrap: wrap; gap: 3px 8px;
+    min-width: 0; padding: 6px 10px; width: auto;
   }
-  .legend-title { flex-basis: 100%; margin-bottom: 2px; }
+  .legend-title { flex-basis: 100%; margin-bottom: 1px; }
   .legend-count { display: none; }
   .foot { display: none; }
 
-  /* 详情/向导面板适配窄屏，避免同屏叠挡 */
-  .detail { width: min(88vw, 320px); top: 100px; right: 8px; max-height: calc(100% - 118px); }
-  .ai-panel { right: 10px; bottom: 78px; width: min(90vw, 320px); }
-  .ai-fab { right: 14px; bottom: 14px; width: 46px; height: 46px; }
+  /* —— 详情：底部 Bottom Sheet，内容自适应高度 + safe-area —— */
+  .detail {
+    top: auto; left: 8px; right: 8px; bottom: max(8px, env(safe-area-inset-bottom, 8px));
+    width: auto; max-height: 62vh; border-radius: 16px;
+    transform: translateY(28px);
+    transition: transform .28s ease, opacity .26s ease;
+  }
+  .detail.show { transform: translateY(0); }
+  .detail.dim { opacity: .18; transform: translateY(0); }
+  .detail-close { top: 8px; right: 8px; }
+
+  /* —— AI 向导与分享浮层：safe-area + 宽度适配 —— */
+  .ai-panel { right: 8px; bottom: max(10px, env(safe-area-inset-bottom, 10px)); width: min(92vw, 340px); }
+  .ai-fab { right: 12px; bottom: max(12px, env(safe-area-inset-bottom, 12px)); width: 48px; height: 48px; }
+  .share-preview { padding: 12px; }
+  .share-preview-box { width: 94vw; max-height: 84vh; }
   .hint { display: none; }
 }
