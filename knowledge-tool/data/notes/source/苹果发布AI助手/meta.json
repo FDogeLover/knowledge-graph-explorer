@@ -1,50 +1,37 @@
 {
   "id": "苹果发布AI助手",
-  "title": "苹果发布AI助手",
+  "title": "苹果发布新一代AI助手，强化端侧模型",
   "source_url": null,
   "created_at": "2026-08-24 18:41:29",
-  "updated_at": "2026-08-24 18:41:29",
+  "updated_at": "2026-08-25 22:27:33",
   "topic": "科技",
   "tags": [
     "AI",
+    "AI助手",
     "商业金融",
     "手机",
+    "端侧模型",
+    "苹果",
     "营销运营"
   ],
   "keywords": [
-    "AI",
-    "端侧",
-    "助手",
     "苹果",
-    "Siri",
-    "相关",
-    "推理",
-    "新一代"
+    "AI助手",
+    "端侧模型"
   ],
-  "summary": "苹果发布新一代AI助手，强化端侧模型能力。 ## 相关实体 - [[苹果]] - 消费电子巨头 - [[Siri]] - AI助手品牌 ## 相关概念 - [[端侧AI]] - 本地推理趋势",
+  "summary": "苹果发布新一代AI助手，强化端侧模型能力。",
   "status": "clean",
   "fingerprint": "146ae34a354eaf268e0abc2d2822bcd7ed720290",
   "type": "source",
   "source_type": "网页",
   "date_published": "",
   "related_entities": [
-    {
-      "name": "苹果",
-      "desc": "消费电子巨头",
-      "type": "entity"
-    },
-    {
-      "name": "Siri",
-      "desc": "AI助手品牌",
-      "type": "entity"
-    }
+    "苹果",
+    "Siri"
   ],
   "related_concepts": [
-    {
-      "name": "端侧AI",
-      "desc": "本地推理趋势",
-      "type": "concept"
-    }
+    "端侧AI"
   ],
-  "raw_text": ""
+  "raw_text": "",
+  "source_meta": {}
 }
