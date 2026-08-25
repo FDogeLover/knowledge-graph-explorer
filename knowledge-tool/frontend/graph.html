@@ -243,11 +243,11 @@
         if (!list.length) return;
         if (list.length === 1) { list[0].x = W / 2; list[0].y = H / 2; return; }
 
-        // 节点包围盒估算：统一单行胶囊（icon+文本），宽度受限于 max-width
+        // 节点包围盒估算：统一单行胶囊（icon+text+padding），贴合真实渲染宽
         list.forEach(function (nd) {
           var f = nd.type === "entity" ? 13.5 : nd.type === "concept" ? 12.5 : 11.5;
           var textW = ((nd.label || "").length) * f * 0.98 + 4;
-          nd._rw = Math.max(72, Math.min(textW + 34, 210));   // icon + gap + 文本(≤170) + padding
+          nd._rw = Math.max(72, Math.min(textW, 170) + 30 + 22);   // 文本定宽截断 + icon/gap/padding
           nd._rh = 34;
           nd._cr = Math.max(36, nd._rw / 2 + 12);
         });
@@ -265,7 +265,7 @@
           nd.y = c.y + (Math.random() - 0.5) * H * 0.28;
         });
 
-        var clusterG = 0.042, repelR = 260, repelK = 0.9, gapX = 7, gapY = 6, linkAdj = 6, centerG = 0.022;
+        var clusterG = 0.042, repelR = 260, repelK = 0.75, gapX = 16, gapY = 12, linkAdj = 6, centerG = 0.050;
         // 碰撞分离：单遍对所有重叠对沿较小重叠方向完整消除（置于每轮最后，不被其他力覆盖）
         function collidePass() {
           for (var i = 0; i < list.length; i++) {
@@ -322,11 +322,13 @@
               b.x -= ux * pull; b.y -= uy * pull;
             }
           });
-          // ③ 类型聚类引力（轻微分型）+ 中心收拢引力（把边缘节点拉回主视区）
+          // ③ 区块引力（分型）+ 中心收拢引力（拉回游离点），孤立/低关联节点额外向心
           list.forEach(function (nd) {
             var c = C[nd.type] || C.source;
             nd.x += (c.x - nd.x) * clusterG; nd.y += (c.y - nd.y) * clusterG;
-            nd.x += (W / 2 - nd.x) * centerG; nd.y += (H / 2 - nd.y) * centerG;
+            var gx = (W / 2 - nd.x) * centerG, gy = (H / 2 - nd.y) * centerG;
+            if ((nd._deg || 0) <= 1) { gx *= 1.8; gy *= 1.8; }   // 游离/孤立节点更强向心
+            nd.x += gx; nd.y += gy;
             // 防弹飞软墙：单个节点被碰撞推力弹到极限外时吸收一半，避免离群/贴边
             var wallX = W * 0.96, wallY = H * 1.45;
             if (nd.x - W / 2 > wallX) nd.x = W / 2 + wallX * 0.5;
