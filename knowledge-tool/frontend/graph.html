@@ -805,6 +805,15 @@
         return out.join("");
       }
 
+      // 详情卡片滚轮滚动：悬浮在面板上滚动内容，与全局画布缩放(wheel)隔离
+      var gDetail = document.getElementById("gdetail");
+      gDetail.addEventListener("wheel", function (e) {
+        e.stopPropagation();                    // 阻断冒泡→stage 画布缩放
+        e.preventDefault();
+        var y = e.deltaMode === 1 ? e.deltaY * 16 : e.deltaY;   // LINE 模式换算
+        gDetail.scrollTop += y;
+      }, { passive: false });
+
       // 图例按钮：切换弹窗
       var legendBtn = document.getElementById("legendBtn");
       var legendModal = document.getElementById("legendModal");
