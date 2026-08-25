@@ -52,6 +52,10 @@ def enhance_clean(note_id: str) -> dict:
     note = store.load_note(note_id)
     if not note:
         raise FileNotFoundError(f"笔记不存在: {note_id}")
+    if note.meta.type != "source":
+        # 只增强来源笔记；实体/概念骨架页用聚合补全（aggregate_entity_concept），
+        # 否则 LLM 会把实体自身写进 related 造成自环边污染图谱。
+        return {"note_id": note_id, "skipped": True, "reason": "仅来源笔记可增强（实体/概念页请用聚合补全）"}
     body = (note.body or "").strip()
     if len(body) < 10:
         return {"note_id": note_id, "skipped": True, "reason": "正文过短，无需增强"}

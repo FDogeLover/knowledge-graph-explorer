@@ -440,6 +440,8 @@ def graph_data():
     def link(a_id, b_id, label):
         if a_id not in by_id or b_id not in by_id:
             return
+        if a_id == b_id:
+            return  # 自环无意义，防御数据污染（entity 被误写入自身 related）
         key = tuple(sorted((a_id, b_id)))
         if key in seen:
             return  # 已连过，跳过

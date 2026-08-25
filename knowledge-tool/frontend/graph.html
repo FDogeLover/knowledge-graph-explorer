@@ -60,11 +60,15 @@
 
     /* ===== 边 ===== */
     .gedge { position: absolute; height: 2px; transform-origin: 0 50%; pointer-events: none; }
-    .gedge i { position: absolute; inset: 0; opacity: .5; }
-    .gedge i.ent { border-top: 2px solid; }                 /* 实体关联：实线 */
-    .gedge i.con { border-top: 2.5px dashed; opacity: .8; } /* 概念关联：高对比虚线 */
-    .gedge.active i { opacity: 1; }
-    .gedge.faded { opacity: .1; }
+    /* 默认（未选中态）：所有连线低透明度，禁止任何"未选中节点间高亮连线" */
+    .gedge i { position: absolute; inset: 0; opacity: .12; }
+    .gedge i.ent { border-top: 2px solid; }
+    .gedge i.con { border-top: 2.5px dashed; opacity: .12; }
+    /* 仅与选中节点直接相连的边才 100% 高亮（含发光） */
+    .gedge.active i, .gedge.active i.con { opacity: 1; }
+    /* 非选中节点关联边：压到极低，视觉上近乎隐藏 */
+    .gedge.faded { opacity: .05; }
+    .gedge.faded i, .gedge.faded i.con { opacity: .05; }
     /* 关系名：仅悬停邻接节点时以弹窗显示（不再常驻线上） */
     .gedge-label {
       position: absolute; left: 0; top: 0; transform: translate(-50%,-140%);
@@ -322,12 +326,15 @@
         vp.innerHTML = "";
 
         // ---- 边（缩短到节点边缘，避免线条贯穿节点；零长度边防御跳过） ----
+        // g.edgeEls / g.edgeLabels 与 g.edges 索引严格对齐（跳过的边用 null 占位），
+        // 供 focus/syncEdgeLabels 按索引点亮正确边，避免 DOM 缺失导致错位。
+        g.edgeEls = []; g.edgeLabels = [];
         data.edges.forEach(function (e) {
           var a = g.byId[e.from], b = g.byId[e.to];
-          if (!a || !b) return;
+          if (!a || !b) { g.edgeEls.push(null); g.edgeLabels.push(null); return; }
           var dx = b.x - a.x, dy = b.y - a.y;
           var len = Math.hypot(dx, dy);
-          if (len < 2) return;                    // 防 0/近零长度异常边（渲染异常竖线/点）
+          if (len < 2) { g.edgeEls.push(null); g.edgeLabels.push(null); return; }  // 防 0/近零长度异常边
           var ang = Math.atan2(dy, dx) * 180 / Math.PI;
           var ux = dx / len, uy = dy / len;
           var r1 = (a._size || 30) / 2 + 4, r2 = (b._size || 30) / 2 + 4;
@@ -349,6 +356,8 @@
           lab.textContent = e.label || "";
           vp.appendChild(el);
           vp.appendChild(lab);
+          g.edgeEls.push(el);
+          g.edgeLabels.push(lab);
         });
 
         // ---- 节点 ----
@@ -443,11 +452,9 @@
 
         // 一阶邻居
         var ones = g.adj[id] ? new Set(g.adj[id]) : new Set();
-        // 二阶
-        var twos = new Set();
-        ones.forEach(function (o) { if (g.adj[o]) g.adj[o].forEach(function (p) { if (p !== id) twos.add(p); }); });
         function cls(k) {
-          return (k === id) ? ["focus"] : (ones.has(k) ? ["rel"] : (twos.has(k) ? ["rel2"] : ["dim"]));
+          // 严格分层：焦点 = 选中节点 + 一级邻居；其余（含二级）全部 dim
+          return (k === id) ? ["focus"] : (ones.has(k) ? ["rel"] : ["dim"]);
         }
         nodes.forEach(function (el, i) {
           var nk = g.nodes[i].id;
@@ -455,14 +462,14 @@
           var c = cls(nk);
           c.forEach(function (x) { el.classList.add(x); });
         });
-        // 边高亮/淡化（不再常驻文字，聚焦时不自动弹文字）
-        vp.querySelectorAll(".gedge").forEach(function (el) { el.classList.remove("active", "faded"); });
-        var labels = vp.querySelectorAll(".gedge-label");
+        // 边高亮/淡化（严格判定）：仅高亮"起点或终点 == 选中节点 A"的直接关联边，
+        // 其余所有非关联连线（含一级节点之间、二级、未选中节点间）一律压到极低透明度。
+        // 用 g.edgeEls 数组（与 g.edges 索引对齐）而非 DOM 查询，避免索引错位。
+        g.edgeEls.forEach(function (el) { if (el) el.classList.remove("active", "faded"); });
         g.edges.forEach(function (e, i) {
-          var anode = e.from === id || e.to === id, bnode = ones.has(e.from) || ones.has(e.to);
-          var edgeEls = vp.querySelectorAll(".gedge");
-          var el = edgeEls[i]; if (!el) return;
-          if (anode) el.classList.add("active"); else if (bnode) {} else el.classList.add("faded");
+          var el = g.edgeEls[i]; if (!el) return;
+          if (e.from === id || e.to === id) el.classList.add("active");
+          else el.classList.add("faded");
         });
         showDetail(nd);
         if (!g.suppressPan) panIntoView(nd);
@@ -487,14 +494,13 @@
         }
       }
 
-      /* 悬停节点时：仅显示其相邻边的关系名（弹窗化） */
+      /* 悬停节点时：仅显示其相邻边的关系名（弹窗化）；用 g.edgeLabels 对齐数组 */
       function syncEdgeLabels() {
-        var labels = vp.querySelectorAll(".gedge-label");
-        labels.forEach(function (l) { l.style.opacity = "0"; });
+        g.edgeLabels.forEach(function (l) { if (l) l.style.opacity = "0"; });
         if (!g.hoverNode) return;
         g.edges.forEach(function (e, i) {
           if (e.from === g.hoverNode || e.to === g.hoverNode) {
-            var l = labels[i];
+            var l = g.edgeLabels[i];
             if (l) l.style.opacity = "1";
           }
         });
