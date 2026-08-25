@@ -129,6 +129,12 @@
     .gtypes button { border: none; background: transparent; color: var(--c-dim); font-size: 11.5px; padding: 4px 10px; border-radius: 999px; cursor: pointer; white-space: nowrap; transition: all .15s; }
     .gtypes button:hover { color: var(--c-text); }
     .gtypes button.active { background: #4c8bf5; color: #fff; font-weight: 600; }
+    .gtypes-btn {
+      border: 1px solid var(--c-border); background: rgba(76,139,245,.12);
+      color: #9fc0ff; font-size: 11.5px; padding: 6px 12px; border-radius: 999px;
+      cursor: pointer; white-space: nowrap; transition: all .15s;
+    }
+    .gtypes-btn:hover { background: rgba(76,139,245,.25); color: #fff; }
     .g-detail-close {
       position: absolute; top: 10px; right: 10px; width: 26px; height: 26px; padding: 0;
       display: flex; align-items: center; justify-content: center; cursor: pointer; border: none;
@@ -205,6 +211,7 @@
           <button data-t="entity">实体</button>
           <button data-t="concept">概念</button>
         </div>
+        <button class="gtypes-btn" id="resetView" title="退出聚焦，回到全貌视图">⇱ 全貌</button>
       </div>
       <button class="graph-legend-btn" id="legendBtn" title="图例说明">ℹ️</button>
       <div class="legend-modal" id="legendModal" hidden>
@@ -703,9 +710,9 @@
         }
         if (nd.url) html += '<a class="d-link" href="' + esc(nd.url) + '" target="_blank" rel="noopener">↗ 原文链接</a>';
         d.innerHTML = html;
-        // 关闭按钮：隐藏面板（不重触发 focus，保持图面聚焦态）
+        // 关闭按钮：关闭详情并退出聚焦复位（不仅是隐藏面板）
         var closeBtn = d.querySelector(".g-detail-close");
-        if (closeBtn) closeBtn.onclick = function () { d.hidden = true; };
+        if (closeBtn) closeBtn.onclick = function () { clearFocus(); };
         // AI 聚合补全：调用后端综合各来源生成概览，成功后重拉详情刷新
         var aggBtn = d.querySelector(".d-agg");
         if (aggBtn) aggBtn.onclick = function () {
@@ -732,9 +739,18 @@
       // 平移 / 缩放
       stage.addEventListener("mousedown", function (e) {
         if (e.target.closest(".gnode") || e.target.closest(".g-detail")) return;
-        var sx = e.clientX, sy = e.clientY, from = { x: g.pan.x, y: g.pan.y };
-        function mv(ev) { g.pan.x = from.x + (ev.clientX - sx); g.pan.y = from.y + (ev.clientY - sy); apply(); }
-        function up() { window.removeEventListener("mousemove", mv); window.removeEventListener("mouseup", up); }
+        var sx = e.clientX, sy = e.clientY, from = { x: g.pan.x, y: g.pan.y }, dist = 0;
+        function mv(ev) {
+          var dx = ev.clientX - sx, dy = ev.clientY - sy;
+          dist = Math.max(dist, Math.abs(dx) + Math.abs(dy));
+          g.pan.x = from.x + dx; g.pan.y = from.y + dy; apply();
+        }
+        function up() {
+          window.removeEventListener("mousemove", mv);
+          window.removeEventListener("mouseup", up);
+          // 轻点空白（几乎无拖动）→ 退出聚焦回全貌
+          if (dist < 6 && g.selected) clearFocus();
+        }
         window.addEventListener("mousemove", mv);
         window.addEventListener("mouseup", up);
       });
@@ -816,6 +832,10 @@
           g.fType = btn.dataset.t || "";
           applyFilter();
         });
+      });
+      // ⇱ 全貌：一键退出聚焦，回到三区扇形布局
+      document.getElementById("resetView").addEventListener("click", function () {
+        clearFocus();
       });
       // Ctrl+K：聚焦搜索框
       document.addEventListener("keydown", function (e) {
