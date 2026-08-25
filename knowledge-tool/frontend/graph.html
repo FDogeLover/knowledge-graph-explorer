@@ -45,6 +45,13 @@
       box-shadow: 0 0 14px var(--gc), 0 0 4px var(--gc), 0 4px 18px rgba(0,0,0,.5); z-index: 20; }
     /* 非关联：保持结构可见的弱化态（浅透明胶囊，非灰脏） */
     .gnode.dim { opacity: .72; background: rgba(255,255,255,.035); border-color: rgba(255,255,255,.08); color: rgba(200,210,230,.38); box-shadow: none; filter: none; }
+    /* 径向聚焦态：无关节点进一步极淡隐退，让「中心+环形邻居」成为绝对视觉主体 */
+    .graph-stage.radial-on .gnode.dim {
+      opacity: .15; background: transparent; border-color: rgba(255,255,255,.05);
+      color: rgba(200,210,230,.20); pointer-events: none;
+    }
+    .graph-stage.radial-on .gnode.dim .gicon { opacity: .22; }
+    .graph-stage.radial-on .gnode.dim .gdeg { opacity: .2; }
     .gnode.ghost { opacity: .4; }   /* 收起态弱显示 */
 
     .gnode .gdeg {
@@ -355,21 +362,27 @@
             placed[nd.id] = true;
           });
         }
-        // 其余：按类型沉降到背景外围三个区块
-        var Q = {
-          entity:  { cx: W * 0.13, cy: H * 0.24 },
-          concept: { cx: W * 0.13, cy: H * 0.80 },
-          source:  { cx: W * 0.87, cy: H * 0.82 }
-        };
-        g.nodes.forEach(function (nd) {
-          if (placed[nd.id]) return;
-          var q = Q[nd.type] || Q.source;
-          var x = q.cx + (Math.random() - 0.5) * W * 0.16;
-          var y = q.cy + (Math.random() - 0.5) * H * 0.16;
-          nd.x = Math.min(W * 0.97, Math.max(W * 0.03, x));
-          nd.y = Math.min(H * 0.97, Math.max(H * 0.03, y));
-        });
+        // 其余：与焦点无关的节点 → 按类型隐退到四角整齐网格（配合聚焦态极淡，不抢主体）
+        var bins = { entity: [], concept: [], source: [] };
+        g.nodes.forEach(function (nd) { if (!placed[nd.id]) (bins[nd.type] || bins.source).push(nd); });
+        // 右上：entity 角块；左上：concept 角块；底部：source 横排
+        cornerGrid(bins.entity, W * 0.84, H * 0.06 + 26, 4, W);
+        cornerGrid(bins.concept, W * 0.16, H * 0.06 + 26, 4, W);
+        cornerGrid(bins.source, W * 0.50, H * 0.93, 3, W);
         for (var r = 0; r < 60; r++) collidePass();
+      }
+      // 角落整齐网格（隐退块：每格宽 132 两行内紧凑排布，clamp 防出界）
+      function cornerGrid(nodes, cx, cy, perRow, W) {
+        var n = nodes.length; if (!n) return;
+        var cellW = 132;
+        var perRowN = Math.max(1, Math.min(perRow, n));
+        nodes.forEach(function (nd, i) {
+          var row = Math.floor(i / perRowN), col = i % perRowN;
+          nd.x = cx - (perRowN - 1) * cellW / 2 + col * cellW;
+          nd.y = cy + row * 46;
+          nd.x = Math.min(W - 40, Math.max(40, nd.x));
+          nd.y = Math.min(stage.clientHeight - 30, Math.max(30, nd.y));
+        });
       }
       // render 前的入口：计算坐标（全貌模式）
       function layout() {
@@ -584,7 +597,7 @@
         });
         showDetail(nd);
         if (!g.suppressPan) {
-          if (g.radialEnabled) layoutFocus(nd.id);   // 用户点击 → 径向重排
+          if (g.radialEnabled) { layoutFocus(nd.id); stage.classList.add("radial-on"); }  // 用户点击 → 径向重排+无关隐退
           applyPositions(nd.id);
         }
       }
@@ -830,6 +843,7 @@
         vp.querySelectorAll(".gedge").forEach(function (el) { el.classList.remove("active", "faded"); });
         document.getElementById("gdetail").hidden = true;
         g.radialEnabled = false;
+        stage.classList.remove("radial-on");
         layoutOverview();
         applyPositions(null);
       }
