@@ -228,45 +228,118 @@
         source:  { shape: "card",   min: 40,  max: 66,  font: 11 }
       };
 
-      /* ===== 布局：按度数权重分内/外环 + 碰撞避让 ===== */
+      /* ===== 布局：零依赖力导向模拟 + 类型聚类 =====
+         （对齐设计目标，纯 JS 实现，无 d3）：
+         - 防碰撞：按「文字宽度估算半径」硬分离，绝对不重叠（≈节点半径+间距）
+         - 斥力：同类/近邻节点均匀推开（对应 manyBody strength 调大）
+         - 链接弹簧：直接关联节点收紧为知识簇（linkDistance 80~110）
+         - 中心+类型聚类引力：实体/概念/来源分别吸附到各自扇区焦点，防止贴边与全局散乱 */
       function layout() {
         var W = stage.clientWidth || 800, H = stage.clientHeight || 500;
-        var cx = W / 2, cy = H / 2;
+        var list = g.nodes;
+        if (!list.length) return;
+        if (list.length === 1) { list[0].x = W / 2; list[0].y = H / 2; return; }
 
-        // 度数（连接数）
-        var deg = {};
-        g.edges.forEach(function (e) { deg[e.from] = (deg[e.from]||0)+1; deg[e.to] = (deg[e.to]||0)+1; });
+        // 节点包围盒估算（按文字宽度×行数，贴合实际卡片/标签尺寸，×1.12 缓冲估算误差）
+        list.forEach(function (nd) {
+          var f = nd.type === "entity" ? 13.5 : nd.type === "concept" ? 12.5 : 11;
+          var textW = ((nd.label || "").length) * f * 0.98 + 4;
+          var w, h;
+          if (nd.type === "entity") {            // 圆点30 + 文字
+            w = Math.min(36 + textW, 260); h = 34;
+          } else if (nd.type === "concept") {    // 卡片：文字换行最多240宽
+            var cl = Math.max(1, Math.ceil(textW / 216));
+            w = Math.min(textW + 20, 244); h = cl * 16 + 16;
+          } else {                               // source 卡片
+            var sl = Math.max(1, Math.ceil(textW / 240));
+            w = Math.min(textW + 18, 262); h = sl * 14 + 14;
+          }
+          nd._rw = Math.max(64, Math.round(w * 1.12));
+          nd._rh = Math.max(28, Math.round(h * 1.12));
+        });
 
-        // hub（度数高者）放内环，其余外环分散
-        var sorted = g.nodes.slice().sort(function (a, b) { return (deg[b.id]||0) - (deg[a.id]||0); });
-        var mid = Math.min(sorted.length, Math.max(1, Math.ceil(sorted.length * 0.4)));
-        var inner = sorted.slice(0, mid), outer = sorted.slice(mid);
+        // 类型聚类焦点（同类型沉淀到相邻扇区）
+        var C = {
+          entity:  { x: W * 0.55, y: H * 0.36 },
+          concept: { x: W * 0.45, y: H * 0.62 },
+          source:  { x: W * 0.52, y: H * 0.86 }
+        };
+        // 种子：围绕各自聚类焦点随机散开
+        list.forEach(function (nd) {
+          var c = C[nd.type] || C.source;
+          nd.x = c.x + (Math.random() - 0.5) * W * 0.28;
+          nd.y = c.y + (Math.random() - 0.5) * H * 0.28;
+        });
 
-        var R_in = Math.min(W, H) * 0.22, R_out = Math.min(W, H) * 0.40;
-        var angs = {};
-        function ring(list, R, start) {
-          var n = list.length || 1;
-          list.forEach(function (nd, i) {
-            var ang = start + (i / n) * Math.PI * 2 - Math.PI / 2;
-            angs[nd.id] = ang;
-            nd._R = R; nd._budget = (2 * Math.PI * R) / n;   // 每节点弧长 = 碰撞预算
-          });
+        var clusterG = 0.020, repelR = 240, repelK = 1.1, gapX = 10, gapY = 8, linkAdj = 14;
+        // 碰撞分离：单遍对所有重叠对沿较小重叠方向完整消除（置于每轮最后，不被其他力覆盖）
+        function collidePass() {
+          for (var i = 0; i < list.length; i++) {
+            var a = list[i];
+            for (var k = i + 1; k < list.length; k++) {
+              var b = list[k];
+              var dx = a.x - b.x, dy = a.y - b.y;
+              var needX = (a._rw + b._rw) / 2 + gapX;
+              var needY = (a._rh + b._rh) / 2 + gapY;
+              var ovX = needX - Math.abs(dx), ovY = needY - Math.abs(dy);
+              if (ovX > 0 && ovY > 0) {
+                if (ovX < ovY) {
+                  var s = dx >= 0 ? 1 : -1;
+                  a.x += s * ovX; b.x -= s * ovX;
+                } else {
+                  var s2 = dy >= 0 ? 1 : -1;
+                  a.y += s2 * ovY; b.y -= s2 * ovY;
+                }
+              }
+            }
+          }
         }
-        ring(inner, R_in, 0);
-        ring(outer, R_out, (inner.length % 2 ? 0.5 : 0) * Math.PI);
-
-        // 规避同环相邻重叠：按弧长预算控制间距，过挤则整体外扩
-        var radiusMul = 1;
-        g.nodes.forEach(function (nd) {
-          var prev = nd._budget || 0;
-          var need = (nd._size || 40) * 2.2;
-          if (prev < need) radiusMul = Math.max(radiusMul, need / Math.max(prev, 1));
-        });
-        g.nodes.forEach(function (nd) {
-          nd.x = cx + nd._R * radiusMul * Math.cos(angs[nd.id]);
-          nd.y = cy + nd._R * radiusMul * Math.sin(angs[nd.id]);
-        });
+        var ITER = 600;
+        for (var iter = 0; iter < ITER; iter++) {
+          var cool = 1 - iter / ITER;
+          // ① 斥力（簇内均匀铺开；先于碰撞，只负责让簇内部不粘着）
+          for (var i = 0; i < list.length; i++) {
+            var a = list[i];
+            for (var k = i + 1; k < list.length; k++) {
+              var b = list[k];
+              var dx = a.x - b.x, dy = a.y - b.y;
+              var d = Math.sqrt(dx * dx + dy * dy) || 0.001;
+              var ux = dx / d, uy = dy / d;
+              if (d < repelR) {
+                var fr = repelK * cool * (1 - d / repelR);
+                a.x += ux * fr; a.y += uy * fr;
+                b.x -= ux * fr; b.y -= uy * fr;
+              }
+            }
+          }
+          // ② 链接弹簧：目标距离按两端包围盒动态取（> 无重叠最小间距）
+          g.edges.forEach(function (e) {
+            var a = g.byId[e.from], b = g.byId[e.to];
+            if (!a || !b) return;
+            var dx = b.x - a.x, dy = b.y - a.y;
+            var d = Math.sqrt(dx * dx + dy * dy) || 0.001;
+            var tgt = Math.max(96, (a._rw + b._rw) / 2 + linkAdj);
+            var pull = 0;
+            if (d > tgt) pull = (d - tgt) * 0.55 * cool;
+            else if (d < tgt * 0.80) pull = -(tgt * 0.80 - d) * 0.05;
+            if (pull) {
+              var ux = dx / d, uy = dy / d;
+              a.x += ux * pull; a.y += uy * pull;
+              b.x -= ux * pull; b.y -= uy * pull;
+            }
+          });
+          // ③ 类型聚类引力（轻微）+ 中心引力（微弱，防漂远）
+          list.forEach(function (nd) {
+            var c = C[nd.type] || C.source;
+            nd.x += (c.x - nd.x) * clusterG; nd.y += (c.y - nd.y) * clusterG;
+            nd.x += (W / 2 - nd.x) * 0.0015; nd.y += (H / 2 - nd.y) * 0.0015;
+          });
+          // ④ 碰撞分离置于每轮【最后】：当轮结束时零重叠
+          collidePass();
+        }
         desnake();
+        // desnake 可能撞开节点 → 纯碰撞再迭代，直至最终输出绝对无重叠
+        for (var r2 = 0; r2 < 140; r2++) collidePass();
       }
 
       /* ===== 防贯穿：近垂直的『长』边会被画成竖线贯穿整个画布 =====
