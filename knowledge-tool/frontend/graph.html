@@ -240,7 +240,7 @@
         if (!list.length) return;
         if (list.length === 1) { list[0].x = W / 2; list[0].y = H / 2; return; }
 
-        // 节点包围盒估算（按文字宽度×行数，贴合实际卡片/标签尺寸，×1.12 缓冲估算误差）
+        // 节点包围盒估算（按文字宽度×行数，贴合实际卡片/标签尺寸，防重叠依据）
         list.forEach(function (nd) {
           var f = nd.type === "entity" ? 13.5 : nd.type === "concept" ? 12.5 : 11;
           var textW = ((nd.label || "").length) * f * 0.98 + 4;
@@ -254,8 +254,10 @@
             var sl = Math.max(1, Math.ceil(textW / 240));
             w = Math.min(textW + 18, 262); h = sl * 14 + 14;
           }
-          nd._rw = Math.max(64, Math.round(w * 1.12));
-          nd._rh = Math.max(28, Math.round(h * 1.12));
+          nd._rw = Math.max(72, w);
+          nd._rh = Math.max(30, h);
+          // 碰撞半径：胶囊/卡片按长边计算（max(w,h)/2 + 18），实体保底 40px
+          nd._cr = Math.max(40, Math.max(nd._rw, nd._rh) / 2 + 18);
         });
 
         // 类型聚类焦点（同类型沉淀到相邻扇区）
@@ -271,7 +273,7 @@
           nd.y = c.y + (Math.random() - 0.5) * H * 0.28;
         });
 
-        var clusterG = 0.020, repelR = 240, repelK = 1.1, gapX = 10, gapY = 8, linkAdj = 14;
+        var clusterG = 0.020, repelR = 320, repelK = 1.6, gapX = 10, gapY = 8, linkAdj = 14;
         // 碰撞分离：单遍对所有重叠对沿较小重叠方向完整消除（置于每轮最后，不被其他力覆盖）
         function collidePass() {
           for (var i = 0; i < list.length; i++) {
@@ -340,6 +342,35 @@
         desnake();
         // desnake 可能撞开节点 → 纯碰撞再迭代，直至最终输出绝对无重叠
         for (var r2 = 0; r2 < 140; r2++) collidePass();
+        // 高亮关联节点角度拉开（强制扇形等分）：同一 hub 的 n 个一阶邻居按
+        // 2π/n 均分 360°（2 邻居对角 → π，4 邻居互成 90°），彻底杜绝竖直串列/窄楔
+        for (var r3 = 0; r3 < 3; r3++) {
+          list.forEach(function (h) {
+            var nbs = [];
+            g.edges.forEach(function (e) {
+              var b = null;
+              if (e.from === h.id) b = g.byId[e.to];
+              else if (e.to === h.id) b = g.byId[e.from];
+              if (b && nbs.indexOf(b) < 0) nbs.push(b);
+            });
+            var n = nbs.length;
+            if (n < 2) return;
+            // 保持均值朝向（首个邻居极角作基准），其余按步进均分
+            nbs.sort(function (x, y) {
+              return (Math.atan2(x.y - h.y, x.x - h.x)) - (Math.atan2(y.y - h.y, y.x - h.x));
+            });
+            var base = Math.atan2(nbs[0].y - h.y, nbs[0].x - h.x);
+            var step = (2 * Math.PI) / n;
+            nbs.forEach(function (nd, j) {
+              // 跳过与 h 极角几乎相同的节点再摆——直接摆，距离保持原半径
+              var d = Math.hypot(nd.x - h.x, nd.y - h.y) || 60;
+              var ang = base + j * step;
+              nd.x = h.x + d * Math.cos(ang);
+              nd.y = h.y + d * Math.sin(ang);
+            });
+          });
+          for (var r4 = 0; r4 < 50; r4++) collidePass();
+        }
       }
 
       /* ===== 防贯穿：近垂直的『长』边会被画成竖线贯穿整个画布 =====
