@@ -21,12 +21,12 @@
     .gnode .gtext {
       pointer-events: none; font-weight: 600;
       overflow: hidden;
-      display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2;
+      display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3;
       text-overflow: ellipsis;
       /* 关键：禁止中文单字竖排/极端截断 */
       word-break: keep-all; overflow-wrap: anywhere;
       text-shadow: 0 1px 4px rgba(0,0,0,0.85);
-      min-width: 0; max-width: 160px;
+      min-width: 0; max-width: 230px;
       line-height: 1.35;
     }
     /* 实体：小圆点图标 + 右侧文字标签（Label Node：圆与文字分离，不竖排不截断不压圆环） */
@@ -36,13 +36,13 @@
       border: 2px dashed transparent; background: radial-gradient(28px 28px at 50% 35%, var(--gc), transparent 75%);
       box-shadow: inset 0 0 0 2px var(--gc);
     }
-    .gnode.type-entity .gtext { font-size: 13.5px; text-align: left; }
+    .gnode.type-entity .gtext { font-size: 13.5px; text-align: left; max-width: 220px; }
     /* 概念：圆角矩形（Tag 感），文字居中自动换行 */
     .gnode.type-concept { border-radius: 14px; border: 2px solid; padding: 8px 12px; }
-    .gnode.type-concept .gtext { font-size: 12.5px; }
-    /* 来源：卡片式，高度自适应、文字自动换行防溢出 */
-    .gnode.type-source { border-radius: 10px; border: 2px solid; padding: 6px 10px; width: auto; min-width: 60px; max-width: 170px; }
-    .gnode.type-source .gtext { font-size: 11px; font-weight: 500; width: 100%; }
+    .gnode.type-concept .gtext { font-size: 12.5px; max-width: 240px; }
+    /* 来源：卡片式，高度自适应、文字自动换行防溢出；放宽宽度容纳长标题 */
+    .gnode.type-source { border-radius: 10px; border: 2px solid; padding: 6px 10px; width: auto; min-width: 60px; max-width: 280px; }
+    .gnode.type-source .gtext { font-size: 11px; font-weight: 500; width: 100%; max-width: 260px; }
 
     /* 选中：平滑边框高亮（替代刺眼发光）—— 用 box-shadow 环表达，不依赖 border */
     .gnode.focus { box-shadow: 0 0 0 3px var(--gc), 0 4px 18px rgba(0,0,0,.45); z-index: 20; }
