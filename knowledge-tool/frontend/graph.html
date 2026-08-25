@@ -254,10 +254,10 @@
             var sl = Math.max(1, Math.ceil(textW / 240));
             w = Math.min(textW + 18, 262); h = sl * 14 + 14;
           }
-          nd._rw = Math.max(72, w);
-          nd._rh = Math.max(30, h);
-          // 碰撞半径：胶囊/卡片按长边计算（max(w,h)/2 + 18），实体保底 40px
-          nd._cr = Math.max(40, Math.max(nd._rw, nd._rh) / 2 + 18);
+          nd._rw = Math.max(62, w);
+          nd._rh = Math.max(28, h);
+          // 碰撞半径：仅保证文字框边缘不碰（max/2 + 12），不过度留空气带
+          nd._cr = Math.max(36, Math.max(nd._rw, nd._rh) / 2 + 12);
         });
 
         // 类型聚类焦点（同类型沉淀到相邻扇区）
@@ -273,7 +273,7 @@
           nd.y = c.y + (Math.random() - 0.5) * H * 0.28;
         });
 
-        var clusterG = 0.020, repelR = 320, repelK = 1.6, gapX = 10, gapY = 8, linkAdj = 14;
+        var clusterG = 0.026, repelR = 260, repelK = 0.9, gapX = 7, gapY = 6, linkAdj = 6, centerG = 0.045;
         // 碰撞分离：单遍对所有重叠对沿较小重叠方向完整消除（置于每轮最后，不被其他力覆盖）
         function collidePass() {
           for (var i = 0; i < list.length; i++) {
@@ -330,11 +330,17 @@
               b.x -= ux * pull; b.y -= uy * pull;
             }
           });
-          // ③ 类型聚类引力（轻微）+ 中心引力（微弱，防漂远）
+          // ③ 类型聚类引力（轻微分型）+ 中心收拢引力（把边缘节点拉回主视区）
           list.forEach(function (nd) {
             var c = C[nd.type] || C.source;
             nd.x += (c.x - nd.x) * clusterG; nd.y += (c.y - nd.y) * clusterG;
-            nd.x += (W / 2 - nd.x) * 0.0015; nd.y += (H / 2 - nd.y) * 0.0015;
+            nd.x += (W / 2 - nd.x) * centerG; nd.y += (H / 2 - nd.y) * centerG;
+            // 防弹飞软墙：单个节点被碰撞推力弹到极限外时吸收一半，避免离群/贴边
+            var wallX = W * 0.96, wallY = H * 1.45;
+            if (nd.x - W / 2 > wallX) nd.x = W / 2 + wallX * 0.5;
+            else if (nd.x - W / 2 < -wallX) nd.x = W / 2 - wallX * 0.5;
+            if (nd.y - H / 2 > wallY) nd.y = H / 2 + wallY * 0.5;
+            else if (nd.y - H / 2 < -wallY) nd.y = H / 2 - wallY * 0.5;
           });
           // ④ 碰撞分离置于每轮【最后】：当轮结束时零重叠
           collidePass();
@@ -371,6 +377,15 @@
           });
           for (var r4 = 0; r4 < 50; r4++) collidePass();
         }
+        // 离群回拉：desnake/扇形摆位可能把节点抛到极端坐标，收敛画面范围；
+        // 回拉时加 jitter 避免多个节点被硬塞到同一堵墙而纵向堆叠
+        var limX = W * 0.95, limY = H * 1.30;
+        list.forEach(function (nd) {
+          var dxs = nd.x - W / 2, dys = nd.y - H / 2;
+          if (Math.abs(dxs) > limX) nd.x = W / 2 + (dxs > 0 ? 1 : -1) * (limX + (Math.random() - .5) * 60);
+          if (Math.abs(dys) > limY) nd.y = H / 2 + (dys > 0 ? 1 : -1) * (limY + (Math.random() - .5) * 60);
+        });
+        for (var r5 = 0; r5 < 90; r5++) collidePass();
       }
 
       /* ===== 防贯穿：近垂直的『长』边会被画成竖线贯穿整个画布 =====
@@ -537,6 +552,7 @@
         var minY = Math.min.apply(null, ys), maxY = Math.max.apply(null, ys);
         var z = Math.min(W / ((maxX - minX) + 220), H / ((maxY - minY) + 220), 1.5);
         z = Math.max(0.35, z);
+        g.fitZoom = z;                            // 记录整图适配缩放，供聚焦放大参考
         g.zoom = z;
         g.pan.x = W / 2 - (minX + maxX) / 2 * z;
         g.pan.y = H / 2 - (minY + maxY) / 2 * z;
@@ -579,23 +595,17 @@
         if (!g.suppressPan) panIntoView(nd);
       }
 
-      /* 面板避让：面板在右侧，聚焦时把节点平移到左 2/3 视区内，避免被卡片盖住 */
+      /* 聚焦定位：把选中节点平移到视口中心并适度放大（fitZoom×2.6，上限 1.15），
+         让焦点与直接邻居处于清晰视野；右侧详情面板占位时以剩余空间中心为锚。 */
       function panIntoView(nd) {
-        if (stage.clientWidth <= 700) return;   // 移动端：详情在底部，不需要横向避让
-        var sx = g.pan.x + nd.x * g.zoom;      // 节点当前屏幕 x
-        var W = stage.clientWidth;
-        var panelW = 340;
-        var rightBound = W - panelW - 24;      // 右 2/3 上限
-        if (sx > rightBound || sx < 40) {
-          // 平移到面板左缘外侧
-          g.pan.x = rightBound - nd.x * g.zoom - 110;
-          // 也保证纵向可见
-          var sy = g.pan.y + nd.y * g.zoom;
-          var H = stage.clientHeight;
-          if (sy < 40) g.pan.y = 40 - nd.y * g.zoom;
-          if (sy > H - 60) g.pan.y = (H - 60) - nd.y * g.zoom;
-          apply();
-        }
+        var W = stage.clientWidth, H = stage.clientHeight;
+        var panel = W > 700 ? 340 : 0;
+        var cx = (W - panel) / 2, cy = H / 2;
+        var z = Math.max(0.75, Math.min(1.15, (g.fitZoom || 0.5) * 2.6));
+        g.zoom = z;
+        g.pan.x = cx - nd.x * z;
+        g.pan.y = cy - nd.y * z;
+        apply();
       }
 
       /* 悬停节点时：仅显示其相邻边的关系名（弹窗化）；用 g.edgeLabels 对齐数组 */
