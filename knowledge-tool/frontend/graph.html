@@ -775,9 +775,15 @@
         h = h.replace(/\*\*([^*]+)\*\*/g, "<b>$1</b>");
         h = h.replace(/\*([^*]+)\*/g, "<i>$1</i>");
         h = h.replace(/`([^`]+)`/g, "<code>$1</code>");
-        // [[wiki]] → 节点标题（id→label 映射），未收录保留原名；可点击跳转节点
+        // [[wiki]] → 节点标题映射；未收录节点把 slug 美化为可读标题（去日期段、连字符转空格）
+        function prettyWiki(id) {
+          var s = String(id || "");
+          s = s.replace(/-?(20\d{2}-\d{2}-\d{2})-?/g, " ").replace(/-+/g, " ").replace(/\s+/g, " ").trim();
+          s = s.replace(/\b\w/g, function (c) { return c.toUpperCase(); });   // 英文单词首字母大写
+          return s || id;
+        }
         h = h.replace(/\[\[([^\]]+)\]\]/g, function (_, id) {
-          var t = (g.titleById && g.titleById[id]) || id;
+          var t = (g.titleById && g.titleById[id]) || prettyWiki(id);
           return '<span class="md-wiki" data-id="' + id.replace(/"/g, "&quot;") + '">' + t + "</span>";
         });
         h = h.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a class="d-link" href="$2" target="_blank" rel="noopener">$1</a>');
