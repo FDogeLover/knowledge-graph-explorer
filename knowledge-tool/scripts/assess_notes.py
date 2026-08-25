@@ -220,10 +220,96 @@ def enrich_thin(thin: list) -> dict:
     return {"enriched": enriched, "skipped": 0, "failed": failed, "results": results}
 
 
+_OVERVIEW_PROMPT = """你是知识库编辑助手。为「{name}」（{kind}）基于以下引用来源的信息，写一段信息密度高的「概览」（150~250 字，中文，连贯段落，不要分点），覆盖：
+- 它是什么（一句话定位）
+- 各来源提供的核心事实/数据/观点
+- 不同来源侧重的侧面或分歧
+要求：只基于给定片段，不臆造；不要用「根据以上内容」之类的废话开头。
+
+引用来源片段：
+{items}
+
+输出 JSON（严格，不要 markdown 代码块）：{{"overview": "概览（150~250字）"}}"""
+
+
+def overview_all(max_workers: int = 3, retries: int = 2) -> dict:
+    """对缺「概览」且被 ≥1 来源引用的 entity/concept 页，并发用 LLM 生成概览段落。
+    单节点失败容忍（记录 error 不中断）；超时类错误自动重试 retries 次。
+    """
+    from concurrent.futures import ThreadPoolExecutor, as_completed
+
+    if not llm.is_configured():
+        raise RuntimeError("未配置 LLM API Key（设置页或环境变量 LLM_API_KEY），无法补全")
+    targets = []
+    for kind in ("entity", "concept"):
+        for m in store.list_notes(note_type=kind):
+            note = store.load_note(m.id)
+            body = note.body or ""
+            if "## 概览" in body or "## 事件时间线" in body:
+                continue  # 已有富内容
+            refs = []
+            for s in store.list_notes(note_type="source"):
+                snote = store.load_note(s.id)
+                if not snote:
+                    continue
+                try:
+                    links = cleaner.link_entities_concepts(snote)
+                except Exception:  # noqa: BLE001
+                    continue
+                names = [it["name"] for it in links.get("entities", [])] if kind == "entity" \
+                    else [it["name"] for it in links.get("concepts", [])]
+                if m.title not in names:
+                    continue
+                sm = (snote.meta.summary or "").strip() or snote.body.strip()[:120] or "(无摘要)"
+                refs.append(f"- 《{snote.meta.title}》：{sm}")
+            if refs:
+                targets.append({"id": m.id, "kind": kind, "title": m.title, "refs": refs})
+    if not targets:
+        return {"overviewed": 0, "failed": 0, "skipped": 0, "results": []}
+
+    def _one(t):
+        kind_cn = "实体" if t["kind"] == "entity" else "概念"
+        items = "\n".join(t["refs"][:8])
+        last = None
+        for _try in range(retries + 1):
+            try:
+                data = llm.chat_json(
+                    _OVERVIEW_PROMPT.format(name=t["title"], kind=kind_cn, items=items),
+                    "请输出 JSON。", temperature=0.35)
+                overview = str(data.get("overview") or "").strip()
+                if not overview:
+                    raise RuntimeError("LLM 未返回 overview")
+                note = store.load_note(t["id"])
+                body = (note.body or f"# {t['title']}").rstrip() + f"\n\n## 概览\n{overview}\n"
+                note.body = body
+                if not note.meta.summary:
+                    note.meta.summary = overview[:100]
+                note.meta.updated_at = now_iso()
+                store._write_note(note)
+                return {"id": t["id"], "title": t["title"], "overview": overview[:60]}
+            except Exception as e:  # noqa: BLE001
+                last = e
+        return {"id": t["id"], "title": t["title"], "error": str(last)[:120]}
+
+    results, ok, failed = [], 0, 0
+    with ThreadPoolExecutor(max_workers=max_workers) as ex:
+        futures = {ex.submit(_one, t): t for t in targets}
+        for fut in as_completed(futures):
+            r = fut.result()
+            results.append(r)
+            if "error" in r:
+                failed += 1
+            else:
+                ok += 1
+    return {"overviewed": ok, "failed": failed, "skipped": 0, "results": results}
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--delete", action="store_true", help="删除无价值占位节点（软删）")
     ap.add_argument("--enrich", action="store_true", help="对偏薄骨架页跑 LLM 补全")
+    ap.add_argument("--overview", action="store_true", help="对缺概览的实体/概念页并发生成 150~250 字概览段落")
+    ap.add_argument("--workers", type=int, default=4, help="概览生成的并发数")
     ap.add_argument("--json", action="store_true", help="输出 JSON")
     args = ap.parse_args()
 
@@ -246,6 +332,13 @@ def main():
 
     if args.enrich:
         summary["enrich"] = enrich_thin(thin)
+
+    if args.overview:
+        import json as _json
+        summary["overview"] = overview_all(max_workers=args.workers)
+        # 概览写入后重算分层（信息密度已提升的节点移出偏薄）
+        worthless2, thin2, ok2 = assess_all()
+        summary["recheck"] = {"worthless": len(worthless2), "thin": len(thin2), "ok": len(ok2)}
 
     if store.ensure_initialized():
         try:
