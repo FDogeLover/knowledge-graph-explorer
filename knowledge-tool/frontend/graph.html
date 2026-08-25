@@ -439,6 +439,7 @@
       function render(data, opts) {
         opts = opts || {};
         g.nodes = data.nodes; g.byId = {}; g.edges = data.edges; g.adj = {};
+        g.titleById = {}; g.nodes.forEach(function (nd) { g.titleById[nd.id] = nd.label || nd.id; });
         if (!opts.filtered) { g.rawNodes = data.nodes; g.rawEdges = data.edges; }
         g.nodes.forEach(function (nd) { g.byId[nd.id] = nd; });
         var deg = {};
@@ -770,10 +771,15 @@
       // 轻量 Markdown 渲染（无外部库，CSP 安全）：标题/粗斜/列表/链接/代码/[[双链]]
       function inlineMd(s) {
         var h = esc(s);
+        h = h.replace(/ \| /g, " · ");   // 行内分隔符（列表项内嵌 |）统一转 ·，防泄漏
         h = h.replace(/\*\*([^*]+)\*\*/g, "<b>$1</b>");
         h = h.replace(/\*([^*]+)\*/g, "<i>$1</i>");
         h = h.replace(/`([^`]+)`/g, "<code>$1</code>");
-        h = h.replace(/\[\[([^\]]+)\]\]/g, '<span class="md-wiki">$1</span>');
+        // [[wiki]] → 节点标题（id→label 映射），未收录保留原名；可点击跳转节点
+        h = h.replace(/\[\[([^\]]+)\]\]/g, function (_, id) {
+          var t = (g.titleById && g.titleById[id]) || id;
+          return '<span class="md-wiki" data-id="' + id.replace(/"/g, "&quot;") + '">' + t + "</span>";
+        });
         h = h.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a class="d-link" href="$2" target="_blank" rel="noopener">$1</a>');
         return h;
       }
@@ -793,9 +799,21 @@
             out.push((lv <= 2 ? "<h4>" : "<h5>") + inlineMd(m[2]) + (lv <= 2 ? "</h4>" : "</h5>"));
           } else if ((m = t.match(/^[-*]\s+(.*)/)) || (m = t.match(/^\d+[.)]\s+(.*)/))) {
             list.push("<li>" + inlineMd(m[1]) + "</li>");
-          } else if (t.match(/^\|.*\|$/)) {
-            flush(); // 表格：降级为纯文本段落
-            out.push("<p>" + inlineMd(t.replace(/^\||\|$/g, "").replace(/\|/g, " · ")) + "</p>");
+          } else if (t.charAt(0) === "|") {
+            // 表格行：「 | 」→「 · 」单行化；时间线行只保留「日期 · 事件」（隐藏来源列），分隔行隐藏
+            flush();
+            var rowTxt = t.replace(/^\|+/, "").replace(/\|+\s*$/, "").replace(/[ \t]*\|[ \t]*/g, "|");
+            var cells = rowTxt.split("|");
+            for (var ci = 0; ci < cells.length; ci++) cells[ci] = cells[ci].trim();
+            if (cells[0] === "日期" || cells[0] === "时间") {
+              out.push("<p><b>" + (cells[0] + " · " + (cells[1] || "")) + "</b></p>");
+            } else if (/^-+$/.test(cells[0] || "")) {
+              /* 分隔行隐藏 */
+            } else if (cells.length >= 2 && /^(\d{4}(-\d{2})?(-\d{2})?)$/.test(cells[0] || "")) {
+              out.push("<p>" + cells[0] + " · " + inlineMd(cells[1] || "") + "</p>");
+            } else {
+              out.push("<p>" + inlineMd(cells.join(" · ")) + "</p>");
+            }
           } else {
             flush();
             out.push("<p>" + inlineMd(t) + "</p>");
