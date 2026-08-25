@@ -6,49 +6,45 @@
   <title>知识结构 · 知识库工作流工具</title>
   <link rel="stylesheet" href="/css/style.css" />
   <style>
-    .graph-stage { position: relative; height: 68vh; border: 1px solid var(--c-border); border-radius: var(--radius); overflow: hidden; background: radial-gradient(800px 500px at 50% 40%, #14203a 0%, var(--c-bg) 60%); isolation: isolate; }
+    .graph-stage { position: relative; height: 68vh; border: 1px solid var(--c-border); border-radius: var(--radius); overflow: hidden; isolation: isolate;
+      background:
+        radial-gradient(800px 500px at 50% 40%, #14203a 0%, var(--c-bg) 60%),
+        radial-gradient(rgba(255,255,255,.055) 1px, transparent 1.4px);
+      background-size: auto, 22px 22px;   /* 深色底 + 微弱点阵，增强空间深度 */
+    }
     .graph-stage #vp { position: absolute; inset: 0; transform-origin: 0 0; z-index: 1; }
 
-    /* ===== 节点：按类型不同形状 ===== */
+    /* ===== 节点：统一精致胶囊卡片 system ===== */
     .gnode {
       position: absolute; transform: translate(-50%,-50%);
-      display: flex; align-items: center; justify-content: center; text-align: center;
-      cursor: pointer; user-select: none; padding: 6px; box-sizing: border-box;
-      border: 0; line-height: 1.3;
-      transition: box-shadow .25s ease, opacity .25s ease, filter .25s ease;
-      flex-wrap: wrap; gap: 6px;
+      display: flex; align-items: center; justify-content: flex-start; text-align: left;
+      cursor: pointer; user-select: none; padding: 6px 12px; box-sizing: border-box;
+      border: 1px solid; border-radius: 999px;   /* 统一胶囊 */
+      transition: box-shadow .25s ease, opacity .25s ease, filter .25s ease, background .25s ease, border-color .25s ease;
+      white-space: nowrap; gap: 6px;
     }
+    .gnode .gicon { font-size: 12px; line-height: 1; flex-shrink: 0; opacity: .85; }
     .gnode .gtext {
       pointer-events: none; font-weight: 600;
-      overflow: hidden;
-      display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3;
-      text-overflow: ellipsis;
-      /* 关键：禁止中文单字竖排/极端截断 */
-      word-break: keep-all; overflow-wrap: anywhere;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;  /* 单行定宽截断 */
+      display: inline-block; max-width: 170px; min-width: 0;
       text-shadow: 0 1px 4px rgba(0,0,0,0.85);
-      min-width: 0; max-width: 230px;
       line-height: 1.35;
     }
-    /* 实体：小圆点图标 + 右侧文字标签（Label Node：圆与文字分离，不竖排不截断不压圆环） */
-    .gnode.type-entity { flex-direction: row; border-radius: 999px; background: rgba(11,17,27,.5); padding: 5px 10px 5px 5px; border: 1px solid rgba(255,255,255,.14); }
-    .gnode.type-entity .gdot {
-      width: 30px; height: 30px; border-radius: 50%; flex-shrink: 0;
-      border: 2px dashed transparent; background: radial-gradient(28px 28px at 50% 35%, var(--gc), transparent 75%);
-      box-shadow: inset 0 0 0 2px var(--gc);
-    }
-    .gnode.type-entity .gtext { font-size: 13.5px; text-align: left; max-width: 220px; }
-    /* 概念：圆角矩形（Tag 感），文字居中自动换行 */
-    .gnode.type-concept { border-radius: 14px; border: 2px solid; padding: 8px 12px; }
-    .gnode.type-concept .gtext { font-size: 12.5px; max-width: 240px; }
-    /* 来源：卡片式，高度自适应、文字自动换行防溢出；放宽宽度容纳长标题 */
-    .gnode.type-source { border-radius: 10px; border: 2px solid; padding: 6px 10px; width: auto; min-width: 60px; max-width: 280px; }
-    .gnode.type-source .gtext { font-size: 11px; font-weight: 500; width: 100%; max-width: 260px; }
+    .gnode.type-entity .gtext { font-size: 13.5px; }
+    .gnode.type-concept .gtext { font-size: 12.5px; }
+    .gnode.type-source .gtext { font-size: 11.5px; font-weight: 500; }
 
-    /* 选中：平滑边框高亮（替代刺眼发光）—— 用 box-shadow 环表达，不依赖 border */
-    .gnode.focus { box-shadow: 0 0 0 3px var(--gc), 0 4px 18px rgba(0,0,0,.45); z-index: 20; }
-    .gnode:hover { z-index: 15; filter: brightness(1.18); }
-    /* 非选中：提高到 28%~30%，保留微弱边框高光 → 静态时有空间架构感，不做"暗纹盲盒" */
-    .gnode.dim { opacity: .28; filter: grayscale(.35); box-shadow: 0 0 0 1px var(--gc); }
+    /* 未选中（静态态）：精致半透明胶囊，低对比但不脏——星空/脑图感 */
+    .gnode { background: rgba(255,255,255,.05); border-color: rgba(255,255,255,.12); color: #b9c4d6; }
+    .gnode:hover { z-index: 15; filter: brightness(1.15); }
+    /* 一级关联：浅色底 + 类型色描边 */
+    .gnode.rel { background: rgba(255,255,255,.10); border-color: var(--gc); color: #fff; box-shadow: 0 0 0 1px var(--gc); }
+    /* 选中焦点：霓虹发光 */
+    .gnode.focus { background: rgba(255,255,255,.14); border-color: var(--gc); color: #fff;
+      box-shadow: 0 0 14px var(--gc), 0 0 4px var(--gc), 0 4px 18px rgba(0,0,0,.5); z-index: 20; }
+    /* 非关联：保持结构可见的弱化态（浅透明胶囊，非灰脏） */
+    .gnode.dim { opacity: .72; background: rgba(255,255,255,.035); border-color: rgba(255,255,255,.08); color: rgba(200,210,230,.38); box-shadow: none; filter: none; }
     .gnode.ghost { opacity: .4; }   /* 收起态弱显示 */
 
     .gnode .gdeg {
@@ -61,11 +57,18 @@
     /* ===== 边 ===== */
     .gedge { position: absolute; height: 2px; transform-origin: 0 50%; pointer-events: none; }
     /* 默认（未选中态）：所有连线低透明度，禁止任何"未选中节点间高亮连线" */
-    .gedge i { position: absolute; inset: 0; opacity: .12; }
+    .gedge i { position: absolute; inset: 0; opacity: .14; }
     .gedge i.ent { border-top: 2px solid; }
-    .gedge i.con { border-top: 2.5px dashed; opacity: .12; }
-    /* 仅与选中节点直接相连的边才 100% 高亮（含发光） */
-    .gedge.active i, .gedge.active i.con { opacity: 1; }
+    .gedge i.con { border-top: 2.5px dashed; opacity: .14; }
+    /* 仅与选中节点直接相连的边才 100% 高亮：霓虹渐变流光 */
+    @keyframes edgeflow { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+    .gedge.active i, .gedge.active i.con {
+      border-top: 0 !important; height: 2px; opacity: 1;
+      background: linear-gradient(90deg, transparent, var(--gc), transparent);
+      background-size: 200% 100%;
+      animation: edgeflow 2.6s linear infinite;
+      box-shadow: 0 0 8px var(--gc);
+    }
     /* 非选中节点关联边：压到极低，视觉上近乎隐藏 */
     .gedge.faded { opacity: .05; }
     .gedge.faded i, .gedge.faded i.con { opacity: .05; }
@@ -240,31 +243,20 @@
         if (!list.length) return;
         if (list.length === 1) { list[0].x = W / 2; list[0].y = H / 2; return; }
 
-        // 节点包围盒估算（按文字宽度×行数，贴合实际卡片/标签尺寸，防重叠依据）
+        // 节点包围盒估算：统一单行胶囊（icon+文本），宽度受限于 max-width
         list.forEach(function (nd) {
-          var f = nd.type === "entity" ? 13.5 : nd.type === "concept" ? 12.5 : 11;
+          var f = nd.type === "entity" ? 13.5 : nd.type === "concept" ? 12.5 : 11.5;
           var textW = ((nd.label || "").length) * f * 0.98 + 4;
-          var w, h;
-          if (nd.type === "entity") {            // 圆点30 + 文字
-            w = Math.min(36 + textW, 260); h = 34;
-          } else if (nd.type === "concept") {    // 卡片：文字换行最多240宽
-            var cl = Math.max(1, Math.ceil(textW / 216));
-            w = Math.min(textW + 20, 244); h = cl * 16 + 16;
-          } else {                               // source 卡片
-            var sl = Math.max(1, Math.ceil(textW / 240));
-            w = Math.min(textW + 18, 262); h = sl * 14 + 14;
-          }
-          nd._rw = Math.max(62, w);
-          nd._rh = Math.max(28, h);
-          // 碰撞半径：仅保证文字框边缘不碰（max/2 + 12），不过度留空气带
-          nd._cr = Math.max(36, Math.max(nd._rw, nd._rh) / 2 + 12);
+          nd._rw = Math.max(72, Math.min(textW + 34, 210));   // icon + gap + 文本(≤170) + padding
+          nd._rh = 34;
+          nd._cr = Math.max(36, nd._rw / 2 + 12);
         });
 
-        // 类型聚类焦点（同类型沉淀到相邻扇区）
+        // 类型聚类焦点：三区块结构化引导（实体→右上星团、概念→左中星团、来源→底部星团）
         var C = {
-          entity:  { x: W * 0.55, y: H * 0.36 },
-          concept: { x: W * 0.45, y: H * 0.62 },
-          source:  { x: W * 0.52, y: H * 0.86 }
+          entity:  { x: W * 0.60, y: H * 0.30 },
+          concept: { x: W * 0.34, y: H * 0.62 },
+          source:  { x: W * 0.50, y: H * 0.78 }
         };
         // 种子：围绕各自聚类焦点随机散开
         list.forEach(function (nd) {
@@ -273,7 +265,7 @@
           nd.y = c.y + (Math.random() - 0.5) * H * 0.28;
         });
 
-        var clusterG = 0.026, repelR = 260, repelK = 0.9, gapX = 7, gapY = 6, linkAdj = 6, centerG = 0.045;
+        var clusterG = 0.042, repelR = 260, repelK = 0.9, gapX = 7, gapY = 6, linkAdj = 6, centerG = 0.022;
         // 碰撞分离：单遍对所有重叠对沿较小重叠方向完整消除（置于每轮最后，不被其他力覆盖）
         function collidePass() {
           for (var i = 0; i < list.length; i++) {
@@ -467,7 +459,8 @@
           var line = document.createElement("i");
           var isEntity = (e.label || "").indexOf("实体") >= 0;
           line.className = isEntity ? "ent" : "con";
-          line.style.cssText = "border-color:" + a.color + ";filter:drop-shadow(0 0 2px " + a.color + "88);";
+          // --gc 供流光/描边取色
+          line.style.cssText = "border-color:" + a.color + ";--gc:" + a.color + ";filter:drop-shadow(0 0 2px " + a.color + "88);";
           el.appendChild(line);
           var lab = document.createElement("div");
           lab.className = "gedge-label";
@@ -480,16 +473,16 @@
         });
 
         // ---- 节点 ----
+        var NODE_ICON = { source: "📄", entity: "👤", concept: "🏷️" };
         g.nodes.forEach(function (nd) {
           var el = document.createElement("div");
-          var isEntity = (nd.type || "source") === "entity";
           el.className = "gnode type-" + (nd.type || "source");
-          // 实体：小圆点图标+标签（自适应宽度）；概念/来源：卡片式（宽度自适应，高度随内容）
+          // 统一胶囊：类型图标 + 单行省略文本
           el.style.cssText = "left:" + nd.x + "px;top:" + nd.y + "px;color:" + nd.color + ";border-color:" + nd.color + ";--gc:" + nd.color;
           el.title = nd.label;   // Tooltip 完整标题
-          el.innerHTML = isEntity
-            ? '<span class="gdot"></span><span class="gtext">' + esc(nd.label) + "</span>"
-            : '<span class="gtext">' + esc(nd.label) + "</span>";
+          el.innerHTML =
+            '<span class="gicon">' + (NODE_ICON[nd.type] || "◈") + "</span>" +
+            '<span class="gtext">' + esc(nd.label) + "</span>";
           // 度数角标
           if (nd._deg > 1) {
             var b = document.createElement("span");
@@ -797,7 +790,21 @@
           e.preventDefault();
           gsearch.blur();
         }
+        // Esc：清空选中 → 恢复全视图并 zoomToFit（禁止节点残留聚焦/贴边）
+        if (e.key === "Escape" && document.activeElement !== gsearch && g.selected) {
+          clearFocus();
+        }
       });
+
+      /* 清空选中：移除一切高亮 class、关详情面板，回到整图适配视角 */
+      function clearFocus() {
+        g.selected = null; g.hoverNode = null;
+        stage.classList.remove("edge-label-show");
+        vp.querySelectorAll(".gnode").forEach(function (el) { el.classList.remove("focus", "dim", "rel", "rel2"); });
+        vp.querySelectorAll(".gedge").forEach(function (el) { el.classList.remove("active", "faded"); });
+        document.getElementById("gdetail").hidden = true;
+        fit();
+      }
 
       // 初次加载：直接渲染（非过滤态），随后 data 可用时保留原始集
       api.get("/api/graph/data").then(function (data) {
