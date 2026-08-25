@@ -3,7 +3,7 @@
   "title": "集体想象",
   "source_url": null,
   "created_at": "2026-08-24 19:22:55",
-  "updated_at": "2026-08-24 19:22:55",
+  "updated_at": "2026-08-25 12:28:38",
   "topic": "人文",
   "tags": [
     "人文"
@@ -18,7 +18,7 @@
     "维持",
     "来源"
   ],
-  "summary": "制度维持的关键",
+  "summary": "概念；社会制度建立于集体想象之上，是制度维持的关键。",
   "status": "clean",
   "fingerprint": "",
   "type": "concept",
@@ -26,5 +26,6 @@
   "date_published": "",
   "related_entities": [],
   "related_concepts": [],
-  "raw_text": ""
+  "raw_text": "",
+  "source_meta": {}
 }

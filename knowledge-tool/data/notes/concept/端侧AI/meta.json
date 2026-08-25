@@ -3,7 +3,7 @@
   "title": "端侧AI",
   "source_url": null,
   "created_at": "2026-08-24 18:41:31",
-  "updated_at": "2026-08-24 18:41:31",
+  "updated_at": "2026-08-25 12:24:46",
   "topic": "科技",
   "tags": [
     "AI"
@@ -18,7 +18,7 @@
     "定义",
     "趋势"
   ],
-  "summary": "本地推理趋势",
+  "summary": "端侧AI：本地推理趋势，苹果通过自研芯片与AI助手强化并推动普及。",
   "status": "clean",
   "fingerprint": "",
   "type": "concept",
@@ -26,5 +26,6 @@
   "date_published": "",
   "related_entities": [],
   "related_concepts": [],
-  "raw_text": ""
+  "raw_text": "",
+  "source_meta": {}
 }

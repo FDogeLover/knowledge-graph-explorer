@@ -3,7 +3,7 @@
   "title": "3纳米制程",
   "source_url": null,
   "created_at": "2026-08-24 19:22:28",
-  "updated_at": "2026-08-24 19:22:28",
+  "updated_at": "2026-08-25 12:21:25",
   "topic": "科技",
   "tags": [],
   "keywords": [
@@ -16,7 +16,7 @@
     "工艺",
     "先进"
   ],
-  "summary": "当前先进的半导体制造工艺",
+  "summary": "苹果发布搭载3纳米自研芯片的旗舰手机，强化端侧AI与影像续航。",
   "status": "clean",
   "fingerprint": "",
   "type": "concept",
@@ -24,5 +24,6 @@
   "date_published": "",
   "related_entities": [],
   "related_concepts": [],
-  "raw_text": ""
+  "raw_text": "",
+  "source_meta": {}
 }

@@ -3,7 +3,7 @@
   "title": "Siri",
   "source_url": null,
   "created_at": "2026-08-24 18:41:31",
-  "updated_at": "2026-08-24 18:41:31",
+  "updated_at": "2026-08-25 12:14:25",
   "topic": "科技",
   "tags": [
     "AI",
@@ -19,7 +19,7 @@
     "来源",
     "发布"
   ],
-  "summary": "AI助手品牌",
+  "summary": "苹果公司的AI助手品牌",
   "status": "clean",
   "fingerprint": "",
   "type": "entity",
@@ -27,5 +27,6 @@
   "date_published": "",
   "related_entities": [],
   "related_concepts": [],
-  "raw_text": ""
+  "raw_text": "",
+  "source_meta": {}
 }

@@ -3,8 +3,10 @@ __pycache__/
 *.pyc
 .venv/
 
-# 知识库数据（用户数据，不入库）
-data/
+# 知识库数据纳入版本控制（便于误删恢复）；仅敏感配置不入库
+data/settings.json
+# 软删除回收站（误删可手动恢复，但不同步远端）
+data/.trash/
 
 # 工具 / 系统
 .commandcode/

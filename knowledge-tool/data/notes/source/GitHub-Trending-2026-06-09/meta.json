@@ -29,43 +29,8 @@
   "type": "source",
   "source_type": "GitHub",
   "date_published": "2026-06-09",
-  "related_entities": [
-    {
-      "name": "last30days-skill",
-      "desc": "日增第1",
-      "type": "entity"
-    },
-    {
-      "name": "RyanCodrai-turbovec",
-      "desc": "日增第2",
-      "type": "entity"
-    },
-    {
-      "name": "roboflow-supervision",
-      "desc": "日增第3",
-      "type": "entity"
-    },
-    {
-      "name": "refactoringhq-tolaria",
-      "desc": "日增第4",
-      "type": "entity"
-    },
-    {
-      "name": "aaif-goose-goose",
-      "desc": "日增第5",
-      "type": "entity"
-    },
-    {
-      "name": "Agent-Reach",
-      "desc": "日增第6",
-      "type": "entity"
-    },
-    {
-      "name": "CopilotKit",
-      "desc": "日增第9",
-      "type": "entity"
-    }
-  ],
+  "related_entities": [],
   "related_concepts": [],
-  "raw_text": ""
+  "raw_text": "",
+  "source_meta": {}
 }

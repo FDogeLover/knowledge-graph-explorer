@@ -55,6 +55,7 @@ class NoteMeta:
     related_entities: list = field(default_factory=list)   # 双链：相关实体
     related_concepts: list = field(default_factory=list)   # 双链：相关概念
     raw_text: str = ""              # 原始全文（AI 提炼时保留原文，供追溯）
+    source_meta: dict = field(default_factory=dict)  # 采集侧附加结构化信息（如 GitHub 仓库描述/星数）
 
     def to_dict(self) -> dict:
         return asdict(self)

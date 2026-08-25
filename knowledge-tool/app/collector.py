@@ -31,6 +31,14 @@ def collect_url(url: str, topic: str = "", tags: Optional[list] = None,
     title = _pick_title(soup, url)
     body_text = _extract_readable(soup)
 
+    # GitHub 仓库页特判：抓官方描述/星数/作者，入库到 source_meta，
+    # 并注入正文本体，供 LLM 提炼实体会话使用（杜绝"日增第N"式占位定义）
+    repo_meta = _github_repo_meta(url, soup)
+    if repo_meta:
+        desc = repo_meta.get("description") or ""
+        if desc:
+            body_text = f"{desc}\n\n{body_text}" if body_text else desc
+
     note = _build_note(
         title=title,
         body=body_text,
@@ -39,6 +47,9 @@ def collect_url(url: str, topic: str = "", tags: Optional[list] = None,
         tags=tags or [],
         source_type=source_type,
     )
+    if repo_meta:
+        note.meta.source_type = "GitHub"
+        note.meta.source_meta = repo_meta
     refined = _ai_refine(note)   # 自动启用，未配 LLM 静默回退
     result = store.save_note(refined or note)
     if refined is not None:
@@ -167,6 +178,32 @@ _REFINE_SYSTEM = """你是一个知识库精炼助手。用户会给你一篇采
   "related_entities": [{"name": "实体名", "desc": "描述"}],
   "related_concepts": [{"name": "概念名", "desc": "描述"}]
 }"""
+
+
+def _github_repo_meta(url: str, soup) -> dict:
+    """GitHub 公开仓库页特判：抓官方描述/星数/作者（作为实体定义兜底与 source_meta）。
+
+    仅处理 `github.com/{owner}/{repo}` 命名的仓库页；trending/topics 等列表页与
+    `.git`/锚点变体一律忽略，避免把榜单页误当仓库。
+    """
+    m = re.match(r"^https?://github\.com/([^/?#]+)/([^/?#]+)/?", url)
+    if not m:
+        return {}
+    owner, repo = m.group(1), m.group(2)
+    if owner in ("trending", "topics", "collections", "orgs", "search", "login", "features"):
+        return {}
+    if repo.endswith(".git") or repo.startswith("#") or ".md" in repo.lower():
+        return {}
+    desc = ""
+    og = soup.find("meta", property="og:description")
+    if og and og.get("content"):
+        desc = og["content"].strip()
+    stars = ""
+    sm = re.search(r"(\d[\d.,]*[kKmM]?)\s*(stars?)", soup.get_text(" ", strip=True)[:6000])
+    if sm:
+        stars = sm.group(1)
+    return {"owner": owner, "repo": repo, "description": desc, "stars": stars,
+            "official_url": f"https://github.com/{owner}/{repo}"}
 
 
 def _pick_title(soup: BeautifulSoup, fallback: str) -> str:

@@ -10,14 +10,5 @@
 - 隐藏宝石：turbovec（23.9%增长率）、openai/plugins（14.6%增长率）
 - AI Agent技能生态持续爆发
 
-## 相关实体
-- [[last30days-skill]] - 日增第1
-- [[RyanCodrai-turbovec]] - 日增第2
-- [[roboflow-supervision]] - 日增第3
-- [[refactoringhq-tolaria]] - 日增第4
-- [[aaif-goose-goose]] - 日增第5
-- [[Agent-Reach]] - 日增第6
-- [[CopilotKit]] - 日增第9
-
 ## 个人思考
 last30days-skill从昨日的+1111跃升至今日+3558，增长曲线陡峭上扬，说明AI Agent信息聚合能力的市场需求正在加速。turbovec连续两日日增超1500星，Rust在AI工具链中的渗透率持续加速。

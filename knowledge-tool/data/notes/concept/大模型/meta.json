@@ -3,7 +3,7 @@
   "title": "大模型",
   "source_url": null,
   "created_at": "2026-08-24 19:22:55",
-  "updated_at": "2026-08-24 19:22:55",
+  "updated_at": "2026-08-25 12:23:49",
   "topic": "技术",
   "tags": [
     "AI",
@@ -19,7 +19,7 @@
     "模型",
     "核心"
   ],
-  "summary": "驱动本轮 AI 应用的核心",
+  "summary": "推动AI编程变革的技术，加快算法开发",
   "status": "clean",
   "fingerprint": "",
   "type": "concept",
@@ -27,5 +27,6 @@
   "date_published": "",
   "related_entities": [],
   "related_concepts": [],
-  "raw_text": ""
+  "raw_text": "",
+  "source_meta": {}
 }

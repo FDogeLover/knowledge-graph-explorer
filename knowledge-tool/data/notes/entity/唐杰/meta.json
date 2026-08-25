@@ -3,7 +3,7 @@
   "title": "唐杰",
   "source_url": null,
   "created_at": "2026-08-24 18:41:31",
-  "updated_at": "2026-08-24 18:41:31",
+  "updated_at": "2026-08-25 12:16:35",
   "topic": "示例·AI科技",
   "tags": [
     "编程"
@@ -18,7 +18,7 @@
     "Agen",
     "宣布"
   ],
-  "summary": "智谱CEO宣布",
+  "summary": "智谱CEO；人工智能企业管理者",
   "status": "clean",
   "fingerprint": "",
   "type": "entity",
@@ -26,5 +26,6 @@
   "date_published": "",
   "related_entities": [],
   "related_concepts": [],
-  "raw_text": ""
+  "raw_text": "",
+  "source_meta": {}
 }

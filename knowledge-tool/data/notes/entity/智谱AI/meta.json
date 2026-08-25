@@ -3,7 +3,7 @@
   "title": "智谱AI",
   "source_url": null,
   "created_at": "2026-08-24 18:41:31",
-  "updated_at": "2026-08-24 18:41:31",
+  "updated_at": "2026-08-25 12:18:22",
   "topic": "示例·AI科技",
   "tags": [
     "AI",
@@ -19,7 +19,7 @@
     "开源",
     "上下文"
   ],
-  "summary": "开发方",
+  "summary": "人工智能公司；其模型定位最强代码智能体，下周完全开源",
   "status": "clean",
   "fingerprint": "",
   "type": "entity",
@@ -27,5 +27,6 @@
   "date_published": "",
   "related_entities": [],
   "related_concepts": [],
-  "raw_text": ""
+  "raw_text": "",
+  "source_meta": {}
 }
