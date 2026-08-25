@@ -41,7 +41,50 @@ def build_daily() -> dict:
         "topic_dist": index.get("topics", {}),
         "tag_dist": index.get("tags", {}),
         "by_status": index.get("by_status", {}),
+        "governance": build_governance(),
     }
+
+
+def build_governance() -> dict:
+    """今日内容治理洞察：按 updated_at 统计今天的增值操作。
+
+    - updated_today     今天改动过的笔记数
+    - overviews_updated 其中新增/更新「## 概览」的实体/概念页
+    - timelines_updated 其中被处理过「## 事件时间线」的富实体页
+    - definitions_kept  今天补过「定义」的骨架页
+    - summaries_filled  今天补齐「## 摘要」的来源页
+    - update_trend      近 7 日按 updated_at 的改动曲线
+    """
+    metas = store.list_notes()
+    today = datetime.now().strftime("%Y-%m-%d")
+    from datetime import timedelta
+
+    upd_counter = Counter((m.updated_at or "")[:10] for m in metas)
+    stats = {
+        "updated_today": 0, "overviews_updated": 0, "timelines_updated": 0,
+        "definitions_kept": 0, "summaries_filled": 0,
+    }
+    for m in metas:
+        if not (m.updated_at or "").startswith(today):
+            continue
+        stats["updated_today"] += 1
+        body = store.load_note(m.id).body or ""
+        if m.type in ("entity", "concept"):
+            if "## 概览" in body:
+                stats["overviews_updated"] += 1
+            if "## 事件时间线" in body:
+                stats["timelines_updated"] += 1
+            if "## 定义" in body:
+                stats["definitions_kept"] += 1
+        elif m.type == "source" and "## 摘要" in body:
+            stats["summaries_filled"] += 1
+
+    upd_trend = []
+    for i in range(6, -1, -1):
+        d = (datetime.now() - timedelta(days=i)).strftime("%Y-%m-%d")
+        upd_trend.append({"date": d, "count": upd_counter.get(d, 0)})
+    stats["update_trend"] = upd_trend
+    return stats
 
 
 def build_content() -> dict:
