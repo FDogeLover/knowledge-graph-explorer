@@ -220,7 +220,7 @@
       "use strict";
       var stage = document.getElementById("stage");
       var vp = document.getElementById("vp");
-      var g = { nodes: [], byId: {}, edges: [], rawNodes: [], rawEdges: [], zoom: 1, pan: { x: 0, y: 0 }, selected: null, fType: "" };
+      var g = { nodes: [], byId: {}, edges: [], rawNodes: [], rawEdges: [], zoom: 1, pan: { x: 0, y: 0 }, selected: null, fType: "", radialEnabled: false };
 
       function apply() { vp.style.transform = "translate(" + g.pan.x + "px," + g.pan.y + "px) scale(" + g.zoom + ")"; }
 
@@ -231,155 +231,150 @@
         source:  { shape: "card",   min: 40,  max: 66,  font: 11 }
       };
 
-      /* ===== 布局：零依赖力导向模拟 + 类型聚类 =====
-         （对齐设计目标，纯 JS 实现，无 d3）：
-         - 防碰撞：按「文字宽度估算半径」硬分离，绝对不重叠（≈节点半径+间距）
-         - 斥力：同类/近邻节点均匀推开（对应 manyBody strength 调大）
-         - 链接弹簧：直接关联节点收紧为知识簇（linkDistance 80~110）
-         - 中心+类型聚类引力：实体/概念/来源分别吸附到各自扇区焦点，防止贴边与全局散乱 */
-      function layout() {
-        var W = stage.clientWidth || 800, H = stage.clientHeight || 500;
-        var list = g.nodes;
-        if (!list.length) return;
-        if (list.length === 1) { list[0].x = W / 2; list[0].y = H / 2; return; }
+      /* ===== 确定性布局（放弃纯力导向）=====
+     坐标全部由数学公式算死，不做物理迭代——彻底规避"斥力散开/引力堆叠"摆动：
+     - 全貌（Overview）：实体→右侧扇形、概念→左侧扇形、来源→底部横排网格
+     - 焦点（Focus 径向）：选中节点定中心，一级邻居按 2π/n 均匀圆周，
+       二级邻居外环，其余非焦点按类型沉降背景外围网格
+     矩形碰撞仅作最后兜底，保证绝对零重叠。 */
 
-        // 节点包围盒估算：统一单行胶囊（icon+text+padding），贴合真实渲染宽
-        list.forEach(function (nd) {
+      // 胶囊矩形包围盒估算
+      function measureNodes() {
+        g.nodes.forEach(function (nd) {
           var f = nd.type === "entity" ? 13.5 : nd.type === "concept" ? 12.5 : 11.5;
           var textW = ((nd.label || "").length) * f * 0.98 + 4;
-          nd._rw = Math.max(72, Math.min(textW, 170) + 30 + 22);   // 文本定宽截断 + icon/gap/padding
+          nd._rw = Math.max(72, Math.min(textW, 170) + 30 + 22);
           nd._rh = 34;
           nd._cr = Math.max(36, nd._rw / 2 + 12);
         });
-
-        // 类型聚类焦点：三区块结构化引导（实体→右上星团、概念→左中星团、来源→底部星团）
-        var C = {
-          entity:  { x: W * 0.60, y: H * 0.30 },
-          concept: { x: W * 0.34, y: H * 0.62 },
-          source:  { x: W * 0.50, y: H * 0.78 }
+      }
+      // 矩形碰撞分离（兜底，margin 14/10）
+      function collidePass(list) {
+        list = list || g.nodes;
+        for (var i = 0; i < list.length; i++) {
+          var a = list[i];
+          for (var k = i + 1; k < list.length; k++) {
+            var b = list[k];
+            var dx = a.x - b.x, dy = a.y - b.y;
+            var needX = (a._rw + b._rw) / 2 + 14;
+            var needY = (a._rh + b._rh) / 2 + 10;
+            var ovX = needX - Math.abs(dx), ovY = needY - Math.abs(dy);
+            if (ovX > 0 && ovY > 0) {
+              if (ovX < ovY) {
+                var s = dx >= 0 ? 1 : -1;
+                a.x += s * ovX; b.x -= s * ovX;
+              } else {
+                var s2 = dy >= 0 ? 1 : -1;
+                a.y += s2 * ovY; b.y -= s2 * ovY;
+              }
+            }
+          }
+        }
+      }
+      // 扇形放置（角度均分→半径分层，弧长不足自动加大半径）
+      function fanPlace(nodes, cx, cy, a0, a1, r0) {
+        var n = nodes.length; if (!n) return;
+        var span = Math.max(a1 - a0, 0.001);
+        // 每环可容纳数：按平均胶囊宽×中间半径弧长计算
+        var avgW = 118;
+        var midR = r0 + 90;
+        var perRing = Math.max(3, Math.floor((midR * span) / avgW));
+        var rings = Math.ceil(n / perRing) || 1;
+        var ringStep = avgW * 1.1;
+        nodes.forEach(function (nd, i) {
+          var ring = Math.floor(i / perRing), k = i % perRing;
+          var t = perRing > 1 ? k / (perRing - 1) : 0.5;
+          // 保证弧长 ≥ 胶囊宽：r 至少需 span/(perRing-1)*avgW
+          var rMin = avgW * Math.max(perRing - 1, 1) / span;
+          var r = Math.max(r0 + ring * ringStep, rMin + ring * ringStep);
+          var ang = a0 + span * t;
+          nd.x = cx + r * Math.cos(ang);
+          nd.y = cy + r * Math.sin(ang);
+        });
+      }
+      // 网格放置（avatar 底部横排）
+      function gridPlace(nodes, cx, cy, width, rows) {
+        var n = nodes.length; if (!n) return;
+        var perRow = Math.max(1, Math.ceil(n / rows));
+        var cellW = Math.min(132, width / perRow);
+        nodes.forEach(function (nd, i) {
+          var row = Math.floor(i / perRow), col = i % perRow;
+          var x = cx - (perRow - 1) * cellW / 2 + col * cellW;
+          var y = cy + (row - (rows - 1) / 2) * 48;
+          nd.x = x; nd.y = y;
+        });
+      }
+      // 全貌：三区确定性排布
+      function layoutOverview() {
+        var W = stage.clientWidth || 800, H = stage.clientHeight || 500;
+        var cx = W / 2, cy = H / 2;
+        var groups = { entity: [], concept: [], source: [] };
+        g.nodes.forEach(function (nd) { (groups[nd.type] || groups.source).push(nd); });
+        fanPlace(groups.entity, cx, cy, -1.22, 1.22, Math.min(W, H) * 0.16);          // 右侧扇形
+        fanPlace(groups.concept, cx, cy, Math.PI - 1.22, Math.PI + 1.22, Math.min(W, H) * 0.20);  // 左侧扇形
+        gridPlace(groups.source, cx, H * 0.88, W * 0.86, 2);                            // 底部横排
+        for (var r = 0; r < 50; r++) collidePass();
+      }
+      // 焦点：径向确定性布局（选中节点定中心）
+      function layoutFocus(fid) {
+        var W = stage.clientWidth || 800, H = stage.clientHeight || 500;
+        var panel = W > 700 ? 340 : 0;
+        var cx = (W - panel) / 2, cy = H / 2;
+        var A = g.byId[fid]; if (!A) return;
+        var placed = { };
+        A.x = cx; A.y = cy; placed[A.id] = true;
+        // 一级：均匀圆周 R1
+        var ones = [];
+        g.edges.forEach(function (e) {
+          if (e.from === fid) { var O = g.byId[e.to]; if (O && ones.indexOf(O) < 0) ones.push(O); }
+          else if (e.to === fid) { var P = g.byId[e.from]; if (P && ones.indexOf(P) < 0) ones.push(P); }
+        });
+        var n1 = ones.length || 1;
+        var avgW = 118;
+        var R1 = Math.max(180, (n1 * avgW) / (2 * Math.PI) * 1.25);
+        ones.forEach(function (nd, i) {
+          var ang = -Math.PI / 2 + (i / n1) * 2 * Math.PI;
+          var r = R1;
+          nd.x = cx + r * Math.cos(ang); nd.y = cy + r * Math.sin(ang);
+          placed[nd.id] = true;
+        });
+        // 二级：邻居的邻居（均匀外环）
+        var twos = [];
+        ones.forEach(function (o) {
+          var adj = g.adj[o.id];
+          if (!adj) return;
+          adj.forEach(function (p) {
+            if (p !== fid && !placed[p] && g.byId[p] && twos.indexOf(g.byId[p]) < 0) twos.push(g.byId[p]);
+          });
+        });
+        if (twos.length) {
+          var R2 = R1 + Math.min(W, H) * 0.34;
+          twos.forEach(function (nd, i) {
+            var ang = -Math.PI / 2 + (i / twos.length) * 2 * Math.PI;
+            nd.x = cx + R2 * Math.cos(ang); nd.y = cy + R2 * Math.sin(ang);
+            placed[nd.id] = true;
+          });
+        }
+        // 其余：按类型沉降到背景外围三个区块
+        var Q = {
+          entity:  { cx: W * 0.13, cy: H * 0.24 },
+          concept: { cx: W * 0.13, cy: H * 0.80 },
+          source:  { cx: W * 0.87, cy: H * 0.82 }
         };
-        // 种子：围绕各自聚类焦点随机散开
-        list.forEach(function (nd) {
-          var c = C[nd.type] || C.source;
-          nd.x = c.x + (Math.random() - 0.5) * W * 0.28;
-          nd.y = c.y + (Math.random() - 0.5) * H * 0.28;
+        g.nodes.forEach(function (nd) {
+          if (placed[nd.id]) return;
+          var q = Q[nd.type] || Q.source;
+          var x = q.cx + (Math.random() - 0.5) * W * 0.16;
+          var y = q.cy + (Math.random() - 0.5) * H * 0.16;
+          nd.x = Math.min(W * 0.97, Math.max(W * 0.03, x));
+          nd.y = Math.min(H * 0.97, Math.max(H * 0.03, y));
         });
-
-        var clusterG = 0.042, repelR = 260, repelK = 0.75, gapX = 16, gapY = 12, linkAdj = 6, centerG = 0.050;
-        // 碰撞分离：单遍对所有重叠对沿较小重叠方向完整消除（置于每轮最后，不被其他力覆盖）
-        function collidePass() {
-          for (var i = 0; i < list.length; i++) {
-            var a = list[i];
-            for (var k = i + 1; k < list.length; k++) {
-              var b = list[k];
-              var dx = a.x - b.x, dy = a.y - b.y;
-              var needX = (a._rw + b._rw) / 2 + gapX;
-              var needY = (a._rh + b._rh) / 2 + gapY;
-              var ovX = needX - Math.abs(dx), ovY = needY - Math.abs(dy);
-              if (ovX > 0 && ovY > 0) {
-                if (ovX < ovY) {
-                  var s = dx >= 0 ? 1 : -1;
-                  a.x += s * ovX; b.x -= s * ovX;
-                } else {
-                  var s2 = dy >= 0 ? 1 : -1;
-                  a.y += s2 * ovY; b.y -= s2 * ovY;
-                }
-              }
-            }
-          }
-        }
-        var ITER = 600;
-        for (var iter = 0; iter < ITER; iter++) {
-          var cool = 1 - iter / ITER;
-          // ① 斥力（簇内均匀铺开；先于碰撞，只负责让簇内部不粘着）
-          for (var i = 0; i < list.length; i++) {
-            var a = list[i];
-            for (var k = i + 1; k < list.length; k++) {
-              var b = list[k];
-              var dx = a.x - b.x, dy = a.y - b.y;
-              var d = Math.sqrt(dx * dx + dy * dy) || 0.001;
-              var ux = dx / d, uy = dy / d;
-              if (d < repelR) {
-                var fr = repelK * cool * (1 - d / repelR);
-                a.x += ux * fr; a.y += uy * fr;
-                b.x -= ux * fr; b.y -= uy * fr;
-              }
-            }
-          }
-          // ② 链接弹簧：目标距离按两端包围盒动态取（> 无重叠最小间距）
-          g.edges.forEach(function (e) {
-            var a = g.byId[e.from], b = g.byId[e.to];
-            if (!a || !b) return;
-            var dx = b.x - a.x, dy = b.y - a.y;
-            var d = Math.sqrt(dx * dx + dy * dy) || 0.001;
-            var tgt = Math.max(96, (a._rw + b._rw) / 2 + linkAdj);
-            var pull = 0;
-            if (d > tgt) pull = (d - tgt) * 0.55 * cool;
-            else if (d < tgt * 0.80) pull = -(tgt * 0.80 - d) * 0.05;
-            if (pull) {
-              var ux = dx / d, uy = dy / d;
-              a.x += ux * pull; a.y += uy * pull;
-              b.x -= ux * pull; b.y -= uy * pull;
-            }
-          });
-          // ③ 区块引力（分型）+ 中心收拢引力（拉回游离点），孤立/低关联节点额外向心
-          list.forEach(function (nd) {
-            var c = C[nd.type] || C.source;
-            nd.x += (c.x - nd.x) * clusterG; nd.y += (c.y - nd.y) * clusterG;
-            var gx = (W / 2 - nd.x) * centerG, gy = (H / 2 - nd.y) * centerG;
-            if ((nd._deg || 0) <= 1) { gx *= 1.8; gy *= 1.8; }   // 游离/孤立节点更强向心
-            nd.x += gx; nd.y += gy;
-            // 防弹飞软墙：单个节点被碰撞推力弹到极限外时吸收一半，避免离群/贴边
-            var wallX = W * 0.96, wallY = H * 1.45;
-            if (nd.x - W / 2 > wallX) nd.x = W / 2 + wallX * 0.5;
-            else if (nd.x - W / 2 < -wallX) nd.x = W / 2 - wallX * 0.5;
-            if (nd.y - H / 2 > wallY) nd.y = H / 2 + wallY * 0.5;
-            else if (nd.y - H / 2 < -wallY) nd.y = H / 2 - wallY * 0.5;
-          });
-          // ④ 碰撞分离置于每轮【最后】：当轮结束时零重叠
-          collidePass();
-        }
-        desnake();
-        // desnake 可能撞开节点 → 纯碰撞再迭代，直至最终输出绝对无重叠
-        for (var r2 = 0; r2 < 140; r2++) collidePass();
-        // 高亮关联节点角度拉开（强制扇形等分）：同一 hub 的 n 个一阶邻居按
-        // 2π/n 均分 360°（2 邻居对角 → π，4 邻居互成 90°），彻底杜绝竖直串列/窄楔
-        for (var r3 = 0; r3 < 3; r3++) {
-          list.forEach(function (h) {
-            var nbs = [];
-            g.edges.forEach(function (e) {
-              var b = null;
-              if (e.from === h.id) b = g.byId[e.to];
-              else if (e.to === h.id) b = g.byId[e.from];
-              if (b && nbs.indexOf(b) < 0) nbs.push(b);
-            });
-            var n = nbs.length;
-            if (n < 2) return;
-            // 保持均值朝向（首个邻居极角作基准），其余按步进均分
-            nbs.sort(function (x, y) {
-              return (Math.atan2(x.y - h.y, x.x - h.x)) - (Math.atan2(y.y - h.y, y.x - h.x));
-            });
-            var base = Math.atan2(nbs[0].y - h.y, nbs[0].x - h.x);
-            var step = (2 * Math.PI) / n;
-            nbs.forEach(function (nd, j) {
-              // 跳过与 h 极角几乎相同的节点再摆——直接摆，距离保持原半径
-              var d = Math.hypot(nd.x - h.x, nd.y - h.y) || 60;
-              var ang = base + j * step;
-              nd.x = h.x + d * Math.cos(ang);
-              nd.y = h.y + d * Math.sin(ang);
-            });
-          });
-          for (var r4 = 0; r4 < 50; r4++) collidePass();
-        }
-        // 离群回拉：desnake/扇形摆位可能把节点抛到极端坐标，收敛画面范围；
-        // 回拉时加 jitter 避免多个节点被硬塞到同一堵墙而纵向堆叠
-        var limX = W * 0.95, limY = H * 1.30;
-        list.forEach(function (nd) {
-          var dxs = nd.x - W / 2, dys = nd.y - H / 2;
-          if (Math.abs(dxs) > limX) nd.x = W / 2 + (dxs > 0 ? 1 : -1) * (limX + (Math.random() - .5) * 60);
-          if (Math.abs(dys) > limY) nd.y = H / 2 + (dys > 0 ? 1 : -1) * (limY + (Math.random() - .5) * 60);
-        });
-        for (var r5 = 0; r5 < 90; r5++) collidePass();
+        for (var r = 0; r < 60; r++) collidePass();
+      }
+      // render 前的入口：计算坐标（全貌模式）
+      function layout() {
+        measureNodes();
+        layoutOverview();
       }
 
       /* ===== 防贯穿：近垂直的『长』边会被画成竖线贯穿整个画布 =====
@@ -491,7 +486,7 @@
             b.className = "gdeg"; b.textContent = nd._deg; b.style.setProperty("--gc", nd.color);
             el.appendChild(b);
           }
-          el.onclick = function (ev) { ev.stopPropagation(); focus(nd.id); };
+          el.onclick = function (ev) { ev.stopPropagation(); g.radialEnabled = true; focus(nd.id); };
           // 连线文字：仅当悬停的节点就是当前选中/高亮节点时，才显示其相邻边的关系名；
           // 悬停其他（dimmed/未聚焦）节点 → 完全干净，不触发任何文字。
           el.onmouseenter = function () {
@@ -512,6 +507,7 @@
         fit();
         if (data.nodes.length && opts.autoFocus !== false) {
           g.suppressPan = true;
+          g.radialEnabled = false;      // 初次自动聚焦保持全貌扇形，不切径向
           focus(data.nodes[0].id);
           g.suppressPan = false;
         }
@@ -587,7 +583,35 @@
           else el.classList.add("faded");
         });
         showDetail(nd);
-        if (!g.suppressPan) panIntoView(nd);
+        if (!g.suppressPan) {
+          if (g.radialEnabled) layoutFocus(nd.id);   // 用户点击 → 径向重排
+          applyPositions(nd.id);
+        }
+      }
+
+      /* 已构建 DOM 上的坐标重排：节点/边/标签按当前 nd.x/y 更新，并居中或全图适配 */
+      function applyPositions(centerId) {
+        var els = vp.querySelectorAll(".gnode");
+        g.nodes.forEach(function (nd, i) { if (els[i]) { els[i].style.left = nd.x + "px"; els[i].style.top = nd.y + "px"; } });
+        g.edges.forEach(function (e, i) {
+          var el = g.edgeEls[i], lab = g.edgeLabels[i];
+          if (!el) return;
+          var a = g.byId[e.from], b = g.byId[e.to];
+          if (!a || !b) return;
+          var dx = b.x - a.x, dy = b.y - a.y;
+          var len = Math.hypot(dx, dy);
+          if (len < 2) { el.style.display = "none"; if (lab) lab.style.display = "none"; return; }
+          el.style.display = "";
+          if (lab) lab.style.display = "";
+          var ang = Math.atan2(dy, dx) * 180 / Math.PI;
+          var r1 = (a._size || 34) / 2 + 4, r2 = (b._size || 34) / 2 + 4;
+          var drawLen = len - r1 - r2, ox = a.x + dx / len * r1, oy = a.y + dy / len * r1;
+          if (drawLen < 8) { drawLen = len; ox = a.x; oy = a.y; }
+          el.style.cssText = "left:" + ox + "px;top:" + oy + "px;width:" + drawLen + "px;height:2px;transform:rotate(" + ang + "deg)";
+          if (lab) { lab.style.left = ((a.x + b.x) / 2) + "px"; lab.style.top = ((a.y + b.y) / 2) + "px"; }
+        });
+        if (centerId && g.byId[centerId]) panIntoView(g.byId[centerId]);
+        else fit();
       }
 
       /* 聚焦定位：把选中节点平移到视口中心并适度放大（fitZoom×2.6，上限 1.15），
@@ -798,14 +822,16 @@
         }
       });
 
-      /* 清空选中：移除一切高亮 class、关详情面板，回到整图适配视角 */
+      /* 清空选中：移除一切高亮 class、关详情面板、回到全貌扇形布局并 zoomToFit */
       function clearFocus() {
         g.selected = null; g.hoverNode = null;
         stage.classList.remove("edge-label-show");
         vp.querySelectorAll(".gnode").forEach(function (el) { el.classList.remove("focus", "dim", "rel", "rel2"); });
         vp.querySelectorAll(".gedge").forEach(function (el) { el.classList.remove("active", "faded"); });
         document.getElementById("gdetail").hidden = true;
-        fit();
+        g.radialEnabled = false;
+        layoutOverview();
+        applyPositions(null);
       }
 
       // 初次加载：直接渲染（非过滤态），随后 data 可用时保留原始集
