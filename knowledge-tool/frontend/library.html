@@ -65,11 +65,11 @@
       var item = document.createElement("div");
       item.className = "note-item";
       item.innerHTML =
-        '<div class="t" style="cursor:pointer" onclick="toggleBody(this)">▸ ' + esc(n.title) + "</div>" +
+        '<div class="t" style="cursor:pointer" data-nid="' + esc(n.id) + '" onclick="toggleBody(this)">▸ ' + esc(n.title) + "</div>" +
         '<div class="m">' + esc(n.topic || "默认主题") + " · " + esc(n.id) + "</div>" +
         (n.summary ? '<div class="m">摘要：' + esc(n.summary) + "</div>" : "") +
         '<div>' + (n.tags || []).map(function (t) { return '<span class="tag">' + esc(t) + "</span>"; }).join("") + "</div>" +
-        '<div class="body" hidden style="margin-top:8px;white-space:pre-wrap;font-size:13px;color:#cdd5e2;line-height:1.7"></div>' +
+        '<div class="body md-body" hidden style="margin-top:8px;font-size:13px;color:#cdd5e2;line-height:1.7"></div>' +
         '<div style="margin-top:6px"><button class="btn ghost" style="padding:4px 10px;font-size:12px" onclick="cleanOne(\'' + esc(n.id) + '\')">整理</button> ' +
         '<button class="btn ghost" style="padding:4px 10px;font-size:12px;color:#7fb2ff" title="LLM 提炼实体/概念/标签/摘要" onclick="enhanceOne(\'' + esc(n.id) + '\')">AI增强</button> ' +
         '<button class="btn ghost" style="padding:4px 10px;font-size:12px;color:#e04f4f" onclick="delOne(\'' + esc(n.id) + '\')">删除</button></div>';
@@ -80,8 +80,47 @@
       if (body.hidden) {
         body.hidden = false;
         el.textContent = "▾ " + el.textContent.slice(2);
-        api.get("/api/notes/" + el.parentElement.querySelector(".m").textContent.split(" · ")[1]).then(function (n) { body.textContent = n.body; });
+        api.get("/api/notes/" + encodeURIComponent(el.dataset.nid)).then(function (n) { body.innerHTML = renderMd(n.body || ""); });
       } else { body.hidden = true; el.textContent = "▸ " + el.textContent.slice(2); }
+    }
+    // 轻量 Markdown（同图谱详情）：标题/列表/表格·/粗斜/链接/[[双链]]（双链以可读名显示）
+    function inlineMd(s) {
+      var h = esc(s);
+      h = h.replace(/[ \t]*\|[ \t]*\[\[([^\]]+)\]\]/g, function (_, id) { return '<span class="md-wiki">' + niceLink(id) + "</span>"; });
+      h = h.replace(/ \| /g, " · ");
+      h = h.replace(/\*\*([^*]+)\*\*/g, "<b>$1</b>");
+      h = h.replace(/\*([^*]+)\*/g, "<i>$1</i>");
+      h = h.replace(/`([^`]+)`/g, "<code>$1</code>");
+      h = h.replace(/\[\[([^\]]+)\]\]/g, function (_, id) { return '<span class="md-wiki">' + niceLink(id) + "</span>"; });
+      h = h.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a class="d-link" href="$2" target="_blank" rel="noopener">$1</a>');
+      return h;
+    }
+    function niceLink(id) {
+      var s = String(id || "").replace(/-?(20\d{2}-\d{2}-\d{2})-?/g, " ").replace(/-+/g, " ").trim();
+      return s ? s.replace(/\b\w/g, function (c) { return c.toUpperCase(); }) : id;
+    }
+    function renderMd(md) {
+      var out = [], list = [];
+      function flush() { if (list.length) { out.push("<ul>" + list.join("") + "</ul>"); list = []; } }
+      (md || "").split("\n").forEach(function (line) {
+        var t = line.trim();
+        if (!t) { flush(); return; }
+        var m;
+        if ((m = t.match(/^(#{1,4})\s+(.*)/))) { flush(); var lv = m[1].length; out.push((lv <= 2 ? "<h4>" : "<h5>") + inlineMd(m[2]) + (lv <= 2 ? "</h4>" : "</h5>")); }
+        else if ((m = t.match(/^[-*]\s+(.*)/)) || (m = t.match(/^\d+[.)]\s+(.*)/))) { list.push("<li>" + inlineMd(m[1]) + "</li>"); }
+        else if (t.charAt(0) === "|") {
+          flush();
+          var cells = t.replace(/^\|+/, "").replace(/\|+\s*$/, "").replace(/[ \t]*\|[ \t]*/g, "|").split("|");
+          for (var ci = 0; ci < cells.length; ci++) cells[ci] = cells[ci].trim();
+          if (cells[0] === "日期" || cells[0] === "时间") { out.push("<p><b>" + cells[0] + " · " + (cells[1] || "") + "</b></p>"); }
+          else if (/^-+$/.test(cells[0] || "")) { /* 分隔行隐藏 */ }
+          else if (cells.length >= 2 && /^(\d{4}(-\d{2})?(-\d{2})?)$/.test(cells[0] || "")) { out.push("<p>" + cells[0] + " · " + inlineMd(cells[1] || "") + "</p>"); }
+          else { out.push("<p>" + inlineMd(cells.join(" · ")) + "</p>"); }
+        }
+        else { flush(); out.push("<p>" + inlineMd(t) + "</p>"); }
+      });
+      flush();
+      return out.join("");
     }
     async function cleanOne(id) { try { await api.post("/api/notes/" + id + "/clean", {}); toast("已整理：" + id); load(); } catch (e) { toast(e.message, true); } }
     async function enhanceOne(id) {

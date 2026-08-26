@@ -29,7 +29,7 @@
     <div class="panel">
       <h2>批量整理</h2>
       <p style="color:var(--c-dim);font-size:13px;margin-bottom:12px">对全库运行整理器：抽取关键词、按规则打标签、生成一句话摘要，并将状态置为 clean。<b>纯本地规则，离线可用。</b></p>
-      <button class="btn" onclick="cleanAll()">开始全库整理</button>
+      <button class="btn" onclick="cleanAll(this)">开始全库整理</button>
       <div class="progress" id="taskProgress" hidden><i></i></div>
     </div>
 
@@ -58,13 +58,14 @@
 
   <script src="/js/common.js?v=3"></script>
   <script>
-    async function cleanAll() {
+    async function cleanAll(btn) {
+      if (btn) btn.disabled = true;
       document.getElementById("taskProgress").hidden = false;
       try {
         var r = await api.post("/api/notes/clean-all");
         toast("已提交全库整理");
-        pollTask(r.task_id, renderResults);
-      } catch (e) { toast("提交失败：" + e.message, true); }
+        pollTask(r.task_id, function (res) { if (btn) btn.disabled = false; renderResults(res); });
+      } catch (e) { if (btn) btn.disabled = false; toast("提交失败：" + e.message, true); }
     }
     function renderResults(res) {
       if (!res || !res.results) return;
@@ -82,38 +83,40 @@
         if (!d.notes.length) tbody.innerHTML = '<tr><td colspan="3" style="color:var(--c-dim)">库为空</td></tr>';
       });
     }
-    async function enhanceAll() {
-      var btn = document.getElementById("enhanceBtn");
+    async function enhanceAll(btn) {
+      btn = btn || document.getElementById("enhanceBtn");
       try {
         btn.disabled = true;
         var r = await api.post("/api/notes/enhance-all");
         document.getElementById("enhanceProgress").hidden = false;
         toast("已提交 AI 增强整理全库");
         pollTask(r.task_id, function (res) {
+          btn.disabled = false;
           if (res && res.error) return toast("AI 增强失败：" + res.error, true);
           var sk = res && res.skeletons_created ? res.skeletons_created : {};
           toast("AI 增强完成：" + (res ? res.cleaned : "?") + "/" + (res ? res.total : "?") +
             (sk.entity ? "（新建实体+" + sk.entity + " 概念+" + sk.concept + "）" : ""));
         });
       } catch (e) {
-        toast("提交失败：" + e.message, true);
         btn.disabled = false;
+        toast("提交失败：" + e.message, true);
       }
     }
-    async function aggregateAll() {
-      var btn = document.getElementById("aggBtn");
+    async function aggregateAll(btn) {
+      btn = btn || document.getElementById("aggBtn");
       try {
         btn.disabled = true;
         var r = await api.post("/api/notes/aggregate-all");
         document.getElementById("aggProgress").hidden = false;
         toast("已提交 AI 聚合补全");
         pollTask(r.task_id, function (res) {
+          btn.disabled = false;
           if (res && res.error) return toast("聚合失败：" + res.error, true);
           toast("聚合完成：" + (res ? res.aggregated : "?") + " 个节点补全" + (res && res.skipped ? "，" + res.skipped + " 个单引用跳过" : ""));
         });
       } catch (e) {
-        toast("提交失败：" + e.message, true);
         btn.disabled = false;
+        toast("提交失败：" + e.message, true);
       }
     }
     function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }

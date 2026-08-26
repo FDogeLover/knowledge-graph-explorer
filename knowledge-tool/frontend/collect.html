@@ -25,28 +25,7 @@
 
   <div class="wrap">
     <h1>采集</h1>
-    <p class="sub">方式一：AI 按方向采集（只需给主题）；方式二：抓取链接；方式三：粘贴正文。所有采集自动按规范入库（双链/骨架页）。</p>
-
-    <div class="panel">
-      <h2>AI 方向采集</h2>
-      <div style="color:var(--c-dim);font-size:13px;line-height:1.7;margin-bottom:10px">输入一个采集方向（主题/话题/问题），AI 按所选提示词模板自动组织内容并规范入库（含实体/概念双链、可选个人思考）。无需手动维护格式。</div>
-      <div class="row">
-        <input id="direction" type="text" placeholder="如：AI 芯片人才流动；苹果发布新 AI 助手；2026 新能源车市场…" />
-        <select id="dirTemplate"></select>
-        <button class="btn" onclick="doDirection()">AI 采集并入库</button>
-      </div>
-      <div class="progress" id="dirProgress" hidden><i></i></div>
-    </div>
-
-    <div class="panel">
-      <h2>抓取链接</h2>
-      <div class="row">
-        <input id="url" type="text" placeholder="https://example.com/article" />
-        <input id="urlTopic" type="text" placeholder="主题（留空自动归类）" />
-        <input id="urlTags" type="text" placeholder="标签（逗号分隔）" />
-        <button class="btn" onclick="doCollect('url')">采集并入库</button>
-      </div>
-    </div>
+    <p class="sub">方式一：粘贴正文；方式二：抓取链接；方式三：AI 按方向采集（只需给主题）。所有采集自动按规范入库（双链/骨架页）。</p>
 
     <div class="panel">
       <h2>粘贴正文</h2>
@@ -57,8 +36,29 @@
       <div class="row" style="margin-top:10px">
         <input id="txtTopic" type="text" placeholder="主题" />
         <input id="txtTags" type="text" placeholder="标签（逗号分隔）" />
-        <button class="btn" onclick="doCollect('text')">粘贴入库</button>
+        <button class="btn" onclick="doCollect('text', this)">粘贴入库</button>
       </div>
+    </div>
+
+    <div class="panel">
+      <h2>抓取链接</h2>
+      <div class="row">
+        <input id="url" type="text" placeholder="https://example.com/article" />
+        <input id="urlTopic" type="text" placeholder="主题（留空自动归类）" />
+        <input id="urlTags" type="text" placeholder="标签（逗号分隔）" />
+        <button class="btn" onclick="doCollect('url', this)">采集并入库</button>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>AI 方向采集 <span class="tag">需 LLM</span></h2>
+      <div style="color:var(--c-dim);font-size:13px;line-height:1.7;margin-bottom:10px">输入一个采集方向（主题/话题/问题），AI 按所选提示词模板自动组织内容并规范入库（含实体/概念双链、可选个人思考）。</div>
+      <div class="row">
+        <input id="direction" type="text" placeholder="如：AI 芯片人才流动；苹果发布新 AI 助手；2026 新能源车市场…" />
+        <select id="dirTemplate"></select>
+        <button class="btn" onclick="doDirection(this)">AI 采集并入库</button>
+      </div>
+      <div class="progress" id="dirProgress" hidden><i></i></div>
     </div>
 
     <div class="progress" id="taskProgress" hidden><i></i></div>
@@ -66,19 +66,21 @@
 
   <script src="/js/common.js?v=3"></script>
   <script>
-    async function doCollect(kind) {
+    async function doCollect(kind, btn) {
+      if (btn) btn.disabled = true;
       var body;
       if (kind === "url") {
         var url = document.getElementById("url").value.trim();
-        if (!url) return toast("请输入链接", true);
+        if (!url) { if (btn) btn.disabled = false; return toast("请输入链接", true); }
         // URL 格式校验：拦截无效地址，避免提交一个必失败的采集任务
         if (!/^https?:\/\/[^\s]+$/i.test(url)) {
+          if (btn) btn.disabled = false;
           return toast("链接格式无效：需以 http:// 或 https:// 开头", true);
         }
         body = { url: url, topic: document.getElementById("urlTopic").value.trim(), tags: splitTags("urlTags") };
       } else {
         var text = document.getElementById("txt").value.trim();
-        if (!text) return toast("请粘贴正文", true);
+        if (!text) { if (btn) btn.disabled = false; return toast("请粘贴正文", true); }
         body = { text: text, title: document.getElementById("txtTitle").value.trim(), topic: document.getElementById("txtTopic").value.trim(), tags: splitTags("txtTags") };
       }
       try {
@@ -86,17 +88,19 @@
         toast("已提交采集任务");
         document.getElementById("taskProgress").hidden = false;
         pollTask(r.task_id, function (res) {
+          if (btn) btn.disabled = false;
           var msg = res && res.dedup && res.dedup.hit
             ? "已存在相同内容，去重命中（更新原笔记）"
             : "采集完成：" + (res && res.note_id ? res.note_id : "");
           toast(msg);
         });
-      } catch (e) { toast("提交失败：" + e.message, true); }
+      } catch (e) { if (btn) btn.disabled = false; toast("提交失败：" + e.message, true); }
     }
-    async function doDirection() {
+    async function doDirection(btn) {
       var direction = document.getElementById("direction").value.trim();
       if (!direction) return toast("请输入采集方向", true);
       if (direction.length > 80) return toast("采集方向过长（≤80 字），请精简", true);
+      if (btn) btn.disabled = true;
       try {
         var r = await api.post("/api/collect/direction", {
           direction: direction,
@@ -105,6 +109,7 @@
         toast("已提交 AI 方向采集");
         document.getElementById("dirProgress").hidden = false;
         pollTask(r.task_id, function (res) {
+          if (btn) btn.disabled = false;
           if (res && res.error) return toast("AI 采集失败：" + res.error, true);
           var cleaned = res && res.cleaned ? res.cleaned : {};
           var n = res && res.note_id ? res.note_id : "";
@@ -112,8 +117,14 @@
           toast("AI 采集完成：" + n + (sk ? "（新建实体+" + sk.entity + " 概念+" + sk.concept + "）" : ""));
         });
       } catch (e) {
-        // 400：LLM 未配置等——给出明确引导
-        toast("提交失败：" + e.message, true);
+        if (btn) btn.disabled = false;
+        // 未配置 LLM 等：给出明确引导跳转设置
+        if (/LLM|API Key|api_key/i.test(e.message)) {
+          toast(e.message, true);
+          if (confirm("该功能需要配置 LLM API Key\n\n前往「设置」页完成配置？")) location.href = "/settings";
+        } else {
+          toast("提交失败：" + e.message, true);
+        }
       }
     }
     // 下拉动态加载提示词模板（内置 + 自定义），默认选中 deep

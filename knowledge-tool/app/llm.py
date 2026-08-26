@@ -38,11 +38,15 @@ def get_llm_config() -> dict:
 
 
 def save_llm_config(cfg: dict) -> dict:
-    """把 LLM 配置持久化到 data/settings.json（web UI 保存）。"""
+    """把 LLM 配置持久化到 data/settings.json（web UI 保存）。
+    空 API Key 表示"不修改"，沿用已存值（防止误把旧 Key 清空）。
+    """
     path = config.DATA_ROOT / "settings.json"
     d = load_json(path, default={})
+    cur = d.get("llm", {}) or {}
+    api_key = (cfg.get("api_key") or "").strip()
     d["llm"] = {
-        "api_key": (cfg.get("api_key") or "").strip(),
+        "api_key": api_key or cur.get("api_key", ""),
         "base_url": (cfg.get("base_url") or "https://api.openai.com/v1").strip(),
         "model": (cfg.get("model") or "gpt-4o-mini").strip(),
         "provider": (cfg.get("provider") or "auto").strip(),

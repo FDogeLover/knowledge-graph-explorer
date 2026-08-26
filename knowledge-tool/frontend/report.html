@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>报告 · 知识库工作流工具</title>
   <link rel="stylesheet" href="/css/style.css" />
+  <style>.qmark { display:inline-flex;width:13px;height:13px;margin-left:2px;border-radius:50%;background:rgba(255,255,255,.12);color:#9fb4d3;font-size:9px;align-items:center;justify-content:center;vertical-align:1px;cursor:help; }</style>
 </head>
 <body>
   <header class="topbar">
@@ -63,9 +64,10 @@
     }
     function renderStats(s) {
       document.getElementById("statCards").innerHTML =
-        stat("总笔记", s.total) + stat("今日新增", s.today_new) + stat("主题数", s.topics) + stat("标签数", s.tags);
+        stat("总笔记", s.total, "全部来源/实体/概念笔记数") + stat("今日新增", s.today_new, "今天新入库（created_at）的笔记数") +
+        stat("主题数", s.topics, "笔记主题去重数量") + stat("标签数", s.tags, "打标标签种类数量");
     }
-    function stat(lbl, num) { return '<div class="card"><div class="stat"><span class="num">' + num + '</span><span class="lbl">' + lbl + "</span></div></div>"; }
+    function stat(lbl, num, tip) { return '<div class="card" title="' + (tip ? esc(tip) : "") + '"><div class="stat"><span class="num">' + num + '</span><span class="lbl">' + lbl + (tip ? ' <span class="qmark">?</span>' : "") + "</span></div></div>"; }
     function renderTrend(trend) {
       var max = Math.max.apply(null, trend.map(function (t) { return t.count; }).concat([1]));
       document.getElementById("trend").innerHTML =
@@ -89,9 +91,11 @@
     function renderGov(g) {
       if (!g) return;
       document.getElementById("govCards").innerHTML =
-        stat("今日改动", g.updated_today) + stat("新增概览", g.overviews_updated) +
-        stat("时间线处理", g.timelines_updated) + stat("定义补全", g.definitions_kept) +
-        stat("摘要补齐", g.summaries_filled);
+        stat("今日改动", g.updated_today, "今天 updated_at 更新的笔记数") +
+        stat("新增概览", g.overviews_updated, "其中含「概览」段的实体/概念页") +
+        stat("时间线处理", g.timelines_updated, "其中含「事件时间线」的富实体页") +
+        stat("定义补全", g.definitions_kept, "更新过「定义」的骨架页") +
+        stat("摘要补齐", g.summaries_filled, "补齐「摘要」段的来源页");
       // 近 7 日改动趋势（蓝色系，区别于采集趋势）
       var max = Math.max.apply(null, (g.update_trend || []).map(function (t) { return t.count; }).concat([1]));
       document.getElementById("govTrend").innerHTML =

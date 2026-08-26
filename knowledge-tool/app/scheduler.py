@@ -57,7 +57,9 @@ def _cron_match(field: str, value: int) -> bool:
 
 
 def match_expression(cron: str, minute, hour, day, month, wday) -> bool:
-    """校验并匹配 5 段 cron。不符合时报 ValueError。"""
+    """校验并匹配 5 段 cron。不符合时报 ValueError。
+    周字段兼容标准 cron 语义：0 与 7 均表示周日（isoweekday 周日=7）。
+    """
     parts = cron.split()
     if len(parts) != 5:
         raise ValueError("cron 需 5 段：分 时 日 月 周")
@@ -66,7 +68,7 @@ def match_expression(cron: str, minute, hour, day, month, wday) -> bool:
         _cron_match(parts[1], hour),
         _cron_match(parts[2], day),
         _cron_match(parts[3], month),
-        _cron_match(parts[4], wday),
+        _cron_match(parts[4], wday) or (wday == 7 and _cron_match(parts[4], 0)),
     ])
 
 
@@ -156,13 +158,17 @@ def _run_action(action: str, direction: str = "") -> str | None:
 
 
 def _tick() -> None:
-    """扫描一次：跑到点的计划就触发（防止重入，同计划上次未结束则跳过）。"""
+    """扫描一次：跑到点的计划就触发（防止重入：同计划上次未结束则跳过；
+    同一分钟只触发一次——30s tick 下 `* * * * *` 不再双发）。"""
     minute, hour, day, month, wday = _now_fields()
+    mkey = time.strftime("%Y-%m-%d %H:%M")
     items = load_schedules()
     fired = False
     for it in items:
         if not it.get("enabled", True):
             continue
+        if it.get("fired_minute") == mkey:
+            continue  # 本分钟已触发过
         try:
             if not match_expression(it["cron"], minute, hour, day, month, wday):
                 continue
@@ -170,6 +176,7 @@ def _tick() -> None:
             continue
         # 触发
         sid = it["id"]
+        it["fired_minute"] = mkey
         try:
             task_id = _run_action(it["action"], it.get("direction", ""))
         except Exception as e:  # noqa: BLE001

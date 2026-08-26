@@ -59,6 +59,9 @@ def build_governance() -> dict:
     today = datetime.now().strftime("%Y-%m-%d")
     from datetime import timedelta
 
+    # 区块信息来自 index.json 的 note_flags（rebuild 后可用），避免逐个 load_note 读全文
+    flags = store.load_json(store.config.INDEX_FILE, default={}).get("note_flags", {}) or {}
+
     upd_counter = Counter((m.updated_at or "")[:10] for m in metas)
     stats = {
         "updated_today": 0, "overviews_updated": 0, "timelines_updated": 0,
@@ -68,15 +71,14 @@ def build_governance() -> dict:
         if not (m.updated_at or "").startswith(today):
             continue
         stats["updated_today"] += 1
-        body = store.load_note(m.id).body or ""
-        if m.type in ("entity", "concept"):
-            if "## 概览" in body:
-                stats["overviews_updated"] += 1
-            if "## 事件时间线" in body:
-                stats["timelines_updated"] += 1
-            if "## 定义" in body:
-                stats["definitions_kept"] += 1
-        elif m.type == "source" and "## 摘要" in body:
+        f = flags.get(m.id, {})
+        if f.get("has_overview"):
+            stats["overviews_updated"] += 1
+        if f.get("has_timeline"):
+            stats["timelines_updated"] += 1
+        if f.get("has_def"):
+            stats["definitions_kept"] += 1
+        if m.type == "source" and f.get("has_summary"):
             stats["summaries_filled"] += 1
 
     upd_trend = []

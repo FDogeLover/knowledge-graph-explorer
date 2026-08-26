@@ -131,13 +131,16 @@
       } catch (e) { toast("加载失败：" + e.message, true); }
     }
     async function saveLlm() {
+      var key = document.getElementById("llmKey").value.trim();
       try {
-        var r = await api.post("/api/settings/llm", {
-          api_key: document.getElementById("llmKey").value.trim(),
+        var payload = {
           base_url: document.getElementById("llmBase").value.trim(),
           model: document.getElementById("llmModel").value.trim(),
           provider: document.getElementById("llmProvider").value,
-        });
+        };
+        if (key) payload.api_key = key;              // 留空 = 保持原 Key 不变
+        else toast("未填写新 Key，将保留原配置");
+        var r = await api.post("/api/settings/llm", payload);
         toast(r.configured ? "LLM 配置已保存 ✅" : "已保存（未填 Key，AI 采集不可用）");
         document.getElementById("llmStatus").textContent = r.configured ? "✅ 已配置（" + r.model + "）" : "⚠ 未配置 API Key";
         document.getElementById("llmKey").value = "";

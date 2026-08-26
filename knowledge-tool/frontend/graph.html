@@ -179,7 +179,7 @@
     @media (max-width: 700px) {
       .g-detail { left: 8px; right: 8px; top: auto; bottom: max(8px, env(safe-area-inset-bottom, 8px)); width: auto; max-height: 55vh; border-radius: 16px; }
       .graph-hint { right: 10px; bottom: max(10px, env(safe-area-inset-bottom, 10px)); }
-      .graph-tools { top: 10px; left: 10px; right: 10px; flex-wrap: wrap; gap: 6px; }
+      .graph-tools { top: 10px; left: 10px; right: 10px; flex-wrap: wrap; gap: 6px; padding-right: 44px; }
       .gsearch { flex: 1; min-width: 120px; }
       .gtypes button { padding: 4px 8px; font-size: 11px; }
       .gnode.type-entity .gtext { font-size: 13px; }
@@ -223,9 +223,9 @@
       <button class="graph-legend-btn" id="legendBtn" title="图例说明">ℹ️</button>
       <div class="legend-modal" id="legendModal" hidden>
         <h4>图例说明</h4>
-        <div class="lm-item"><span class="lm-dot" style="background:#4c8bf5"></span>来源（蓝色 · 卡片）— 文章/链接/文本</div>
-        <div class="lm-item"><span class="lm-dot" style="background:#f59e0b"></span>实体（橙色 · 圆形）— 公司/组织/人物</div>
-        <div class="lm-item"><span class="lm-dot" style="background:#a855f7;border-radius:5px"></span>概念（紫色 · 圆角）— 抽象词/趋势</div>
+        <div class="lm-item"><span class="lm-dot" style="background:#4c8bf5;border-radius:999px"></span>来源（蓝色 · 胶囊）— 文章/链接/文本</div>
+        <div class="lm-item"><span class="lm-dot" style="background:#f59e0b;border-radius:999px"></span>实体（橙色 · 胶囊）— 公司/组织/人物</div>
+        <div class="lm-item"><span class="lm-dot" style="background:#a855f7;border-radius:999px"></span>概念（紫色 · 胶囊）— 抽象词/趋势</div>
         <h4 style="margin-top:12px">连线</h4>
         <div class="lm-item"><span class="lm-dot" style="background:#4c8bf5;height:3px;border-radius:0"></span>&nbsp;实线 = 实体关联 · 虚线 = 概念关联</div>
         <div class="lm-item"><span class="lm-dot" style="background:transparent"></span>数字角标 = 该节点连接数</div>
@@ -566,6 +566,13 @@
 
       function fit() {
         var W = stage.clientWidth, H = stage.clientHeight;
+        if (!g.nodes || !g.nodes.length) {
+          // 空库：避免 Math.min([])=Infinity → zoom NaN 白屏，展示友好空态
+          vp.innerHTML = '<div style="position:absolute;left:50%;top:45%;transform:translate(-50%,-50%);text-align:center;color:var(--c-dim);font-size:14px">' +
+            '图谱还是空的<br><span style="font-size:12px;opacity:.8">去<a href="/collect" style="color:#8ab4ff">采集</a>添加内容后回来看看</span></div>';
+          apply();
+          return;
+        }
         var xs = g.nodes.map(function (n) { return n.x; }), ys = g.nodes.map(function (n) { return n.y; });
         var minX = Math.min.apply(null, xs), maxX = Math.max.apply(null, xs);
         var minY = Math.min.apply(null, ys), maxY = Math.max.apply(null, ys);
@@ -901,8 +908,10 @@
         }
       });
 
-      /* 清空选中：移除一切高亮 class、关详情面板、回到全貌扇形布局并 zoomToFit */
+      /* 清空选中：移除一切高亮 class、关详情面板、回到全貌扇形布局并 zoomToFit；
+       若处于搜索/类型过滤态则一并清除过滤，重新渲染全库。 */
       function clearFocus() {
+        var hadFilter = (g.fType || "").length > 0 || !!document.getElementById("gsearch").value.trim();
         g.selected = null; g.hoverNode = null;
         stage.classList.remove("edge-label-show");
         vp.querySelectorAll(".gnode").forEach(function (el) { el.classList.remove("focus", "dim", "rel", "rel2"); });
@@ -910,6 +919,14 @@
         document.getElementById("gdetail").hidden = true;
         g.radialEnabled = false;
         stage.classList.remove("radial-on");
+        if (hadFilter) {
+          // 复位过滤条件并重绘全量（不清除 focus 之外的目标）
+          g.fType = "";
+          document.getElementById("gsearch").value = "";
+          document.querySelectorAll("#gtypes button").forEach(function (b) { b.classList.toggle("active", !b.dataset.t); });
+          render({ nodes: g.rawNodes, edges: g.rawEdges }, { autoFocus: false, after: "fit" });
+          return;
+        }
         layoutOverview();
         applyPositions(null);
       }
