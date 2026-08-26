@@ -9,6 +9,20 @@
     if (href === page || (page === "index" && href === "")) a.classList.add("active");
   });
 
+  // 移动端导航收折：注入 ☰ 按钮，点击切换 .nav-open（窄屏下 .nav 默认为下拉）
+  (function navToggle() {
+    var nav = document.querySelector(".nav");
+    var tb = document.querySelector(".topbar");
+    if (!nav || !tb || tb.querySelector(".nav-toggle")) return;
+    var b = document.createElement("button");
+    b.type = "button"; b.className = "nav-toggle"; b.setAttribute("aria-label", "打开菜单"); b.textContent = "☰";
+    tb.appendChild(b);
+    b.onclick = function (e) { e.stopPropagation(); tb.classList.toggle("nav-open"); };
+    document.addEventListener("click", function (e) {
+      if (!tb.contains(e.target)) tb.classList.remove("nav-open");
+    });
+  })();
+
   // API 助手
   // 从错误响应里提取后端 detail（如 400 的引导文案），兜底给 HTTP 状态
   async function errorOf(r) {

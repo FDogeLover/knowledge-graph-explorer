@@ -235,7 +235,7 @@
     </div>
   </div>
 
-  <script src="/js/common.js?v=3"></script>
+  <script src="/js/common.js?v=4"></script>
   <script>
     (function () {
       "use strict";
@@ -259,11 +259,16 @@
        二级邻居外环，其余非焦点按类型沉降背景外围网格
      矩形碰撞仅作最后兜底，保证绝对零重叠。 */
 
-      // 胶囊矩形包围盒估算
+      // 胶囊矩形包围盒估算：用 canvas.measureText 实测标签宽，替代字符数×系数
+      var _mctx = (function () { var c = document.createElement("canvas"); return c.getContext ? c.getContext("2d") : null; })();
+      function textWidth(s, fontPx) {
+        if (_mctx) { _mctx.font = "600 " + fontPx + "px sans-serif"; var w = _mctx.measureText(String(s)).width; if (w > 0) return w; }
+        return String(s).length * fontPx * 0.98;   // 兜底估算
+      }
       function measureNodes() {
         g.nodes.forEach(function (nd) {
           var f = nd.type === "entity" ? 13.5 : nd.type === "concept" ? 12.5 : 11.5;
-          var textW = ((nd.label || "").length) * f * 0.98 + 4;
+          var textW = textWidth(nd.label || "", f) + 4;
           nd._rw = Math.max(72, Math.min(textW, 170) + 30 + 22);
           nd._rh = 34;
           nd._cr = Math.max(36, nd._rw / 2 + 12);

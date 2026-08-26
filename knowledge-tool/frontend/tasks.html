@@ -41,13 +41,17 @@
     <div style="max-width:720px;width:100%;max-height:82vh;overflow:auto;border:1px solid var(--c-border);border-radius:14px;background:#0d1420;padding:18px;box-shadow:0 12px 40px rgba(0,0,0,.55)">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
         <b id="modalTitle" style="font-size:14px"></b>
-        <button class="g-detail-close" onclick="hideModal()" style="position:static;width:26px;height:26px;display:flex;align-items:center;justify-content:center;border-radius:50%;background:rgba(255,255,255,.08);color:var(--c-dim);border:none;cursor:pointer">✕</button>
+        <span style="display:flex;gap:8px;align-items:center">
+          <button id="copyBtn" class="btn ghost" style="padding:4px 10px;font-size:12px" onclick="copyResult()">复制结果</button>
+          <button class="g-detail-close" onclick="hideModal()" style="position:static;width:26px;height:26px;display:flex;align-items:center;justify-content:center;border-radius:50%;background:rgba(255,255,255,.08);color:var(--c-dim);border:none;cursor:pointer">✕</button>
+        </span>
       </div>
       <pre id="modalBody" style="font-size:11.5px;line-height:1.65;white-space:pre-wrap;word-break:break-all;color:#cdd8e8;margin:0;font-family:ui-monospace,Consolas,monospace"></pre>
+      <div style="margin-top:10px;text-align:right"><button class="btn ghost" style="padding:4px 12px;font-size:12px" onclick="copyResult()">复制到剪贴板</button></div>
     </div>
   </div>
 
-  <script src="/js/common.js?v=3"></script>
+  <script src="/js/common.js?v=4"></script>
   <script>
     function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
     // 结果摘要：截断显示，最多 2 行
@@ -94,6 +98,21 @@
       m.style.display = "flex";
     }
     function hideModal() { document.getElementById("resultModal").style.display = "none"; }
+    function copyResult() {
+      var text = document.getElementById("modalBody").textContent || "";
+      if (!text) return toast("没有可复制的内容", true);
+      var done = function () { toast("已复制结果 ✅"); };
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(done).catch(function () { fallbackCopy(text); done(); });
+      } else { fallbackCopy(text); done(); }
+    }
+    function fallbackCopy(text) {
+      var ta = document.createElement("textarea");
+      ta.value = text; ta.style.position = "fixed"; ta.style.opacity = "0";
+      document.body.appendChild(ta); ta.select();
+      try { document.execCommand("copy"); } catch (e) { /* ignore */ }
+      document.body.removeChild(ta);
+    }
     async function clearDone() {
       try {
         var r = await api.post("/api/tasks/clear", {});
